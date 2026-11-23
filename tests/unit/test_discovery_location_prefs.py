@@ -40,3 +40,15 @@ def test_postings_older_than_the_limit_are_skipped_and_undated_ones_kept():
     assert _ok(recent, posted_within_days=90)[0]
     assert _ok(undated, posted_within_days=90)[0]                               # no date = unknown, never a reason to skip
     assert _ok(old)[0]                                                          # no limit set: nothing is skipped for age
+
+
+def test_indian_city_or_state_without_the_word_india_still_matches_india():
+    # Real location strings from the 23 Nov 2026 career-page run that were wrongly dropped.
+    for loc in (["Bangalore"], ["Bangalore, IND"], ["Gurugram"], ["Noida, Uttar Pradesh"], ["India Pune"], ["in Bangalore"], ["Bengaluru"]):
+        assert _ok(_job(loc), locations=["Pune", "India"])[0], loc
+    assert _ok(_job(["India Pune"]), locations=["Pune"])[0]                                    # city preference found inside "India Pune"
+
+
+def test_places_outside_india_are_not_mistaken_for_india():
+    for loc in (["Indianapolis, IN"], ["Indiana, US"], ["London, UK"], ["San Francisco, CA, US"], ["Singapore"]):
+        assert _ok(_job(loc), locations=["Pune", "India"]) == (False, "location"), loc

@@ -51,7 +51,25 @@ def _places(record: JobRecord) -> set[str]:
     """Every place a job names: its city keys plus each part of its location text, so a preference of "India"
     matches "Bengaluru, India" (a city key alone would not)."""
     parts = [p.strip() for loc in record.location for p in re.split(r"[,(/)]|\s[-–]\s", loc) if p.strip()]
-    return set(record.location_keys) | set(location_keys(parts))
+    places = set(record.location_keys) | set(location_keys(parts))
+    words = set(re.findall(r"[a-z]+", " ".join(record.location).lower()))
+    text = " " + " ".join(re.findall(r"[a-z]+", " ".join(record.location).lower())) + " "
+    for country, (codes, names) in _COUNTRY_PLACES.items():   # a city / state / code alone still names its country
+        if words & codes or any(f" {n} " in text for n in names):
+            places.add(country)
+            places |= {n for n in names if f" {n} " in text}   # "India Pune" / "in Bangalore" -> pune / bangalore as well
+    return places | set(location_keys(sorted(places)))
+
+
+# Lookup data (not candidate data): places that are unambiguously in a country, so a preference of "India" keeps a job listed as
+# "Bangalore", "Gurugram" or "Noida, Uttar Pradesh" (the posting does not repeat the country name).
+_COUNTRY_PLACES: dict[str, tuple[set[str], tuple[str, ...]]] = {
+    "india": ({"ind"}, ("india", "bengaluru", "bangalore", "pune", "mumbai", "bombay", "hyderabad", "chennai", "madras", "kolkata",
+                        "calcutta", "delhi", "new delhi", "gurugram", "gurgaon", "noida", "greater noida", "ahmedabad", "jaipur", "kochi",
+                        "cochin", "coimbatore", "indore", "chandigarh", "thiruvananthapuram", "trivandrum", "mysuru", "mysore", "nagpur",
+                        "vadodara", "bhubaneswar", "lucknow", "visakhapatnam", "navi mumbai", "thane", "karnataka", "maharashtra",
+                        "telangana", "tamil nadu", "uttar pradesh", "haryana", "west bengal", "gujarat", "kerala", "rajasthan")),
+}
 
 
 def matches_query(record: JobRecord, q: SearchQuery, catalog: SkillCatalog, now: datetime) -> tuple[bool, str]:
