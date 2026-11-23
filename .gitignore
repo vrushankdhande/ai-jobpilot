@@ -1,0 +1,34 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+logs/*.log
+.streamlit/secrets.toml
+.DS_Store
+.idea/
+.vscode/
+
+# Runtime storage (keep placeholders)
+storage/resumes/*
+storage/generated/*
+storage/screenshots/*
+!storage/**/.gitkeep
+storage/notifications/*
+storage/browser_sessions/*
+!storage/**/.gitkeep
+
+# backups contain personal data
+backups/
+config/backups/
+docs/benchmark_*.tmp
+
+# React dashboard build artefacts
+web/node_modules/
+web/dist/
+web/coverage/
+tests/e2e/_failures/

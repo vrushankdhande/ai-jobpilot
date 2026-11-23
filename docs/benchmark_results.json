@@ -1,0 +1,1831 @@
+{
+ "runs": [
+  {
+   "machine": {
+    "cpu_count": 16,
+    "python": "3.11.18",
+    "platform": "win32",
+    "ram_gb": 15.7
+   },
+   "dataset": {
+    "jobs": 1000,
+    "applications": 300,
+    "events": 1800,
+    "queue_tasks": 200,
+    "interviews": 60
+   },
+   "when": "2026-11-13T05:18:18.197768+00:00",
+   "seed_seconds": 0.14,
+   "memory_rss_mb_idle": 120.2,
+   "latency_sequential": {
+    "/health": {
+     "n": 30,
+     "p50_ms": 0.9,
+     "p95_ms": 1.2,
+     "max_ms": 1.6,
+     "mean_ms": 1.0
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 30,
+     "p50_ms": 6.8,
+     "p95_ms": 12.5,
+     "max_ms": 15.6,
+     "mean_ms": 7.9
+    },
+    "/api/jobs?limit=50": {
+     "n": 30,
+     "p50_ms": 6.4,
+     "p95_ms": 9.1,
+     "max_ms": 14.1,
+     "mean_ms": 6.8
+    },
+    "/api/jobs/page?min_match_score=70&limit=25": {
+     "n": 30,
+     "p50_ms": 11.6,
+     "p95_ms": 18.5,
+     "max_ms": 20.2,
+     "mean_ms": 12.3
+    },
+    "/api/applications/page?limit=25": {
+     "n": 30,
+     "p50_ms": 6.6,
+     "p95_ms": 8.0,
+     "max_ms": 9.4,
+     "mean_ms": 6.8
+    },
+    "/api/applications/page?states=SUBMITTED&states=VERIFIED&q=Company": {
+     "n": 30,
+     "p50_ms": 7.5,
+     "p95_ms": 9.9,
+     "max_ms": 11.2,
+     "mean_ms": 7.5
+    },
+    "/api/dashboard/summary": {
+     "n": 30,
+     "p50_ms": 26.8,
+     "p95_ms": 50.5,
+     "max_ms": 51.3,
+     "mean_ms": 30.8
+    },
+    "/api/analytics/overview": {
+     "n": 30,
+     "p50_ms": 69.8,
+     "p95_ms": 97.7,
+     "max_ms": 105.0,
+     "mean_ms": 69.4
+    },
+    "/api/queue": {
+     "n": 30,
+     "p50_ms": 24.5,
+     "p95_ms": 56.2,
+     "max_ms": 117.2,
+     "mean_ms": 29.7
+    },
+    "/api/interviews?limit=25": {
+     "n": 30,
+     "p50_ms": 10.4,
+     "p95_ms": 19.0,
+     "max_ms": 23.2,
+     "mean_ms": 11.3
+    },
+    "/api/interviews/upcoming": {
+     "n": 30,
+     "p50_ms": 5.6,
+     "p95_ms": 10.0,
+     "max_ms": 10.1,
+     "mean_ms": 6.1
+    },
+    "/api/settings": {
+     "n": 30,
+     "p50_ms": 13.7,
+     "p95_ms": 24.8,
+     "max_ms": 26.3,
+     "mean_ms": 15.0
+    },
+    "/api/scheduler/status": {
+     "n": 30,
+     "p50_ms": 13.8,
+     "p95_ms": 31.9,
+     "max_ms": 33.2,
+     "mean_ms": 16.6
+    },
+    "/api/reports/daily": {
+     "n": 30,
+     "p50_ms": 5.1,
+     "p95_ms": 9.2,
+     "max_ms": 9.6,
+     "mean_ms": 5.2
+    }
+   },
+   "concurrency": {
+    "/api/dashboard/summary": {
+     "n": 200,
+     "p50_ms": 537.7,
+     "p95_ms": 682.1,
+     "max_ms": 834.0,
+     "mean_ms": 516.7,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 36.4,
+     "api_cpu_seconds": 5.25,
+     "wall_seconds": 5.49
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 200,
+     "p50_ms": 323.0,
+     "p95_ms": 470.8,
+     "max_ms": 554.5,
+     "mean_ms": 334.5,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 55.1,
+     "api_cpu_seconds": 3.33,
+     "wall_seconds": 3.63
+    },
+    "/api/applications/page?limit=25": {
+     "n": 200,
+     "p50_ms": 334.7,
+     "p95_ms": 444.9,
+     "max_ms": 530.4,
+     "mean_ms": 330.3,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 55.9,
+     "api_cpu_seconds": 3.36,
+     "wall_seconds": 3.58
+    },
+    "/health": {
+     "n": 200,
+     "p50_ms": 60.7,
+     "p95_ms": 80.3,
+     "max_ms": 94.7,
+     "mean_ms": 59.2,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 260.2,
+     "api_cpu_seconds": 0.47,
+     "wall_seconds": 0.77
+    }
+   },
+   "memory_rss_mb_after_load": 139.7,
+   "resume_parsing_ms": {
+    "pdf": {
+     "n": 8,
+     "p50_ms": 55.6,
+     "p95_ms": 186.5,
+     "max_ms": 186.5,
+     "mean_ms": 69.9
+    },
+    "docx": {
+     "n": 1,
+     "p50_ms": 125.5,
+     "p95_ms": 125.5,
+     "max_ms": 125.5,
+     "mean_ms": 125.5
+    }
+   },
+   "matching_ms": {
+    "analyze_jd": {
+     "n": 30,
+     "p50_ms": 16.6,
+     "p95_ms": 23.1,
+     "max_ms": 27.3,
+     "mean_ms": 16.5
+    },
+    "score": {
+     "n": 30,
+     "p50_ms": 22.5,
+     "p95_ms": 32.2,
+     "max_ms": 33.3,
+     "mean_ms": 21.6
+    },
+    "jobs": 30
+   },
+   "memory_rss_mb_end": 144.6,
+   "query_plans": {
+    "jobs by discovered_at (list)": "IXSCAN",
+    "jobs by source": "IXSCAN",
+    "jobs by job_id": "IXSCAN",
+    "applications by state": "IXSCAN",
+    "applications by job": "IXSCAN",
+    "applications by key": "IXSCAN",
+    "events of an application": "IXSCAN",
+    "queue claim": "IXSCAN",
+    "interviews upcoming": "IXSCAN",
+    "matches by job": "IXSCAN",
+    "applications created in range": "IXSCAN",
+    "jobs discovered in range": "IXSCAN"
+   },
+   "server_cpu_percent_sample": 4.0,
+   "worker": {
+    "tasks": 200,
+    "seconds": 2.45,
+    "tasks_per_second": 81.8,
+    "parallel_claim": {
+     "threads": 8,
+     "tasks": 200,
+     "unique": 200,
+     "seconds": 0.52
+    }
+   }
+  },
+  {
+   "machine": {
+    "cpu_count": 16,
+    "python": "3.11.18",
+    "platform": "win32",
+    "ram_gb": 15.7
+   },
+   "dataset": {
+    "jobs": 1000,
+    "applications": 300,
+    "events": 1800,
+    "queue_tasks": 200,
+    "interviews": 60
+   },
+   "when": "2026-11-13T05:18:49.917052+00:00",
+   "seed_seconds": 0.16,
+   "memory_rss_mb_idle": 120.1,
+   "latency_sequential": {
+    "/health": {
+     "n": 30,
+     "p50_ms": 1.0,
+     "p95_ms": 1.2,
+     "max_ms": 1.5,
+     "mean_ms": 1.0
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 30,
+     "p50_ms": 6.9,
+     "p95_ms": 10.1,
+     "max_ms": 10.5,
+     "mean_ms": 7.5
+    },
+    "/api/jobs?limit=50": {
+     "n": 30,
+     "p50_ms": 8.6,
+     "p95_ms": 11.7,
+     "max_ms": 12.1,
+     "mean_ms": 8.3
+    },
+    "/api/jobs/page?min_match_score=70&limit=25": {
+     "n": 30,
+     "p50_ms": 13.8,
+     "p95_ms": 20.2,
+     "max_ms": 22.3,
+     "mean_ms": 14.5
+    },
+    "/api/applications/page?limit=25": {
+     "n": 30,
+     "p50_ms": 7.2,
+     "p95_ms": 8.5,
+     "max_ms": 11.8,
+     "mean_ms": 7.4
+    },
+    "/api/applications/page?states=SUBMITTED&states=VERIFIED&q=Company": {
+     "n": 30,
+     "p50_ms": 7.3,
+     "p95_ms": 9.6,
+     "max_ms": 10.7,
+     "mean_ms": 7.6
+    },
+    "/api/dashboard/summary": {
+     "n": 30,
+     "p50_ms": 38.7,
+     "p95_ms": 57.7,
+     "max_ms": 68.9,
+     "mean_ms": 40.1
+    },
+    "/api/analytics/overview": {
+     "n": 30,
+     "p50_ms": 60.2,
+     "p95_ms": 105.0,
+     "max_ms": 114.6,
+     "mean_ms": 64.9
+    },
+    "/api/queue": {
+     "n": 30,
+     "p50_ms": 20.9,
+     "p95_ms": 35.6,
+     "max_ms": 47.8,
+     "mean_ms": 22.4
+    },
+    "/api/interviews?limit=25": {
+     "n": 30,
+     "p50_ms": 6.7,
+     "p95_ms": 13.4,
+     "max_ms": 15.1,
+     "mean_ms": 7.6
+    },
+    "/api/interviews/upcoming": {
+     "n": 30,
+     "p50_ms": 7.2,
+     "p95_ms": 11.1,
+     "max_ms": 12.4,
+     "mean_ms": 7.4
+    },
+    "/api/settings": {
+     "n": 30,
+     "p50_ms": 9.7,
+     "p95_ms": 19.3,
+     "max_ms": 19.7,
+     "mean_ms": 10.2
+    },
+    "/api/scheduler/status": {
+     "n": 30,
+     "p50_ms": 12.8,
+     "p95_ms": 29.9,
+     "max_ms": 37.7,
+     "mean_ms": 14.9
+    },
+    "/api/reports/daily": {
+     "n": 30,
+     "p50_ms": 5.1,
+     "p95_ms": 8.6,
+     "max_ms": 10.7,
+     "mean_ms": 5.2
+    }
+   },
+   "concurrency": {
+    "/api/dashboard/summary": {
+     "n": 200,
+     "p50_ms": 539.7,
+     "p95_ms": 712.6,
+     "max_ms": 903.2,
+     "mean_ms": 527.9,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 36.0,
+     "api_cpu_seconds": 4.73,
+     "wall_seconds": 5.56
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 200,
+     "p50_ms": 319.6,
+     "p95_ms": 420.4,
+     "max_ms": 495.7,
+     "mean_ms": 318.4,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 57.3,
+     "api_cpu_seconds": 3.58,
+     "wall_seconds": 3.49
+    },
+    "/api/applications/page?limit=25": {
+     "n": 200,
+     "p50_ms": 312.6,
+     "p95_ms": 415.8,
+     "max_ms": 461.1,
+     "mean_ms": 310.4,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 59.0,
+     "api_cpu_seconds": 3.45,
+     "wall_seconds": 3.39
+    },
+    "/health": {
+     "n": 200,
+     "p50_ms": 55.5,
+     "p95_ms": 153.5,
+     "max_ms": 174.8,
+     "mean_ms": 62.1,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 255.2,
+     "api_cpu_seconds": 0.61,
+     "wall_seconds": 0.78
+    }
+   },
+   "memory_rss_mb_after_load": 139.2,
+   "resume_parsing_ms": {
+    "pdf": {
+     "n": 8,
+     "p50_ms": 60.0,
+     "p95_ms": 212.7,
+     "max_ms": 212.7,
+     "mean_ms": 73.3
+    },
+    "docx": {
+     "n": 1,
+     "p50_ms": 92.4,
+     "p95_ms": 92.4,
+     "max_ms": 92.4,
+     "mean_ms": 92.4
+    }
+   },
+   "matching_ms": {
+    "analyze_jd": {
+     "n": 30,
+     "p50_ms": 9.4,
+     "p95_ms": 21.0,
+     "max_ms": 23.6,
+     "mean_ms": 11.5
+    },
+    "score": {
+     "n": 30,
+     "p50_ms": 11.4,
+     "p95_ms": 22.1,
+     "max_ms": 22.9,
+     "mean_ms": 13.2
+    },
+    "jobs": 30
+   },
+   "memory_rss_mb_end": 142.0,
+   "query_plans": {
+    "jobs by discovered_at (list)": "IXSCAN",
+    "jobs by source": "IXSCAN",
+    "jobs by job_id": "IXSCAN",
+    "applications by state": "IXSCAN",
+    "applications by job": "IXSCAN",
+    "applications by key": "IXSCAN",
+    "events of an application": "IXSCAN",
+    "queue claim": "IXSCAN",
+    "interviews upcoming": "IXSCAN",
+    "matches by job": "IXSCAN",
+    "applications created in range": "IXSCAN",
+    "jobs discovered in range": "IXSCAN"
+   },
+   "server_cpu_percent_sample": 6.0,
+   "worker": {
+    "tasks": 200,
+    "seconds": 2.09,
+    "tasks_per_second": 95.5,
+    "parallel_claim": {
+     "threads": 8,
+     "tasks": 200,
+     "unique": 200,
+     "seconds": 0.49
+    }
+   }
+  },
+  {
+   "machine": {
+    "cpu_count": 16,
+    "python": "3.11.18",
+    "platform": "win32",
+    "ram_gb": 15.7
+   },
+   "dataset": {
+    "jobs": 1000,
+    "applications": 300,
+    "events": 1800,
+    "queue_tasks": 200,
+    "interviews": 60
+   },
+   "when": "2026-11-13T05:19:20.647489+00:00",
+   "seed_seconds": 0.11,
+   "memory_rss_mb_idle": 120.2,
+   "latency_sequential": {
+    "/health": {
+     "n": 30,
+     "p50_ms": 1.1,
+     "p95_ms": 1.5,
+     "max_ms": 1.6,
+     "mean_ms": 1.1
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 30,
+     "p50_ms": 7.2,
+     "p95_ms": 11.0,
+     "max_ms": 13.8,
+     "mean_ms": 8.0
+    },
+    "/api/jobs?limit=50": {
+     "n": 30,
+     "p50_ms": 5.6,
+     "p95_ms": 8.7,
+     "max_ms": 10.4,
+     "mean_ms": 6.2
+    },
+    "/api/jobs/page?min_match_score=70&limit=25": {
+     "n": 30,
+     "p50_ms": 12.4,
+     "p95_ms": 17.0,
+     "max_ms": 19.2,
+     "mean_ms": 12.8
+    },
+    "/api/applications/page?limit=25": {
+     "n": 30,
+     "p50_ms": 6.9,
+     "p95_ms": 8.3,
+     "max_ms": 9.6,
+     "mean_ms": 7.0
+    },
+    "/api/applications/page?states=SUBMITTED&states=VERIFIED&q=Company": {
+     "n": 30,
+     "p50_ms": 7.2,
+     "p95_ms": 9.1,
+     "max_ms": 10.0,
+     "mean_ms": 7.4
+    },
+    "/api/dashboard/summary": {
+     "n": 30,
+     "p50_ms": 27.9,
+     "p95_ms": 54.5,
+     "max_ms": 56.9,
+     "mean_ms": 31.3
+    },
+    "/api/analytics/overview": {
+     "n": 30,
+     "p50_ms": 69.6,
+     "p95_ms": 116.5,
+     "max_ms": 121.2,
+     "mean_ms": 75.6
+    },
+    "/api/queue": {
+     "n": 30,
+     "p50_ms": 25.2,
+     "p95_ms": 38.5,
+     "max_ms": 41.5,
+     "mean_ms": 24.8
+    },
+    "/api/interviews?limit=25": {
+     "n": 30,
+     "p50_ms": 8.1,
+     "p95_ms": 13.2,
+     "max_ms": 13.3,
+     "mean_ms": 8.7
+    },
+    "/api/interviews/upcoming": {
+     "n": 30,
+     "p50_ms": 5.8,
+     "p95_ms": 11.7,
+     "max_ms": 12.0,
+     "mean_ms": 6.9
+    },
+    "/api/settings": {
+     "n": 30,
+     "p50_ms": 12.8,
+     "p95_ms": 22.4,
+     "max_ms": 26.1,
+     "mean_ms": 13.5
+    },
+    "/api/scheduler/status": {
+     "n": 30,
+     "p50_ms": 18.8,
+     "p95_ms": 38.1,
+     "max_ms": 43.9,
+     "mean_ms": 21.6
+    },
+    "/api/reports/daily": {
+     "n": 30,
+     "p50_ms": 5.5,
+     "p95_ms": 8.3,
+     "max_ms": 8.4,
+     "mean_ms": 5.9
+    }
+   },
+   "concurrency": {
+    "/api/dashboard/summary": {
+     "n": 200,
+     "p50_ms": 534.3,
+     "p95_ms": 706.8,
+     "max_ms": 828.6,
+     "mean_ms": 533.3,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 35.4,
+     "api_cpu_seconds": 5.33,
+     "wall_seconds": 5.65
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 200,
+     "p50_ms": 325.0,
+     "p95_ms": 466.2,
+     "max_ms": 540.1,
+     "mean_ms": 322.3,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 57.0,
+     "api_cpu_seconds": 3.34,
+     "wall_seconds": 3.51
+    },
+    "/api/applications/page?limit=25": {
+     "n": 200,
+     "p50_ms": 333.0,
+     "p95_ms": 396.7,
+     "max_ms": 430.7,
+     "mean_ms": 320.1,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 58.3,
+     "api_cpu_seconds": 3.59,
+     "wall_seconds": 3.43
+    },
+    "/health": {
+     "n": 200,
+     "p50_ms": 63.4,
+     "p95_ms": 159.1,
+     "max_ms": 189.0,
+     "mean_ms": 71.9,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 234.2,
+     "api_cpu_seconds": 0.56,
+     "wall_seconds": 0.85
+    }
+   },
+   "memory_rss_mb_after_load": 139.4,
+   "resume_parsing_ms": {
+    "pdf": {
+     "n": 8,
+     "p50_ms": 50.0,
+     "p95_ms": 200.0,
+     "max_ms": 200.0,
+     "mean_ms": 69.6
+    },
+    "docx": {
+     "n": 1,
+     "p50_ms": 154.8,
+     "p95_ms": 154.8,
+     "max_ms": 154.8,
+     "mean_ms": 154.8
+    }
+   },
+   "matching_ms": {
+    "analyze_jd": {
+     "n": 30,
+     "p50_ms": 10.5,
+     "p95_ms": 18.9,
+     "max_ms": 20.7,
+     "mean_ms": 11.4
+    },
+    "score": {
+     "n": 30,
+     "p50_ms": 13.3,
+     "p95_ms": 25.2,
+     "max_ms": 27.7,
+     "mean_ms": 15.0
+    },
+    "jobs": 30
+   },
+   "memory_rss_mb_end": 143.6,
+   "query_plans": {
+    "jobs by discovered_at (list)": "IXSCAN",
+    "jobs by source": "IXSCAN",
+    "jobs by job_id": "IXSCAN",
+    "applications by state": "IXSCAN",
+    "applications by job": "IXSCAN",
+    "applications by key": "IXSCAN",
+    "events of an application": "IXSCAN",
+    "queue claim": "IXSCAN",
+    "interviews upcoming": "IXSCAN",
+    "matches by job": "IXSCAN",
+    "applications created in range": "IXSCAN",
+    "jobs discovered in range": "IXSCAN"
+   },
+   "server_cpu_percent_sample": 5.2,
+   "worker": {
+    "tasks": 200,
+    "seconds": 2.2,
+    "tasks_per_second": 90.7,
+    "parallel_claim": {
+     "threads": 8,
+     "tasks": 200,
+     "unique": 200,
+     "seconds": 0.33
+    }
+   }
+  }
+ ],
+ "before": {
+  "machine": {
+   "cpu_count": 16,
+   "python": "3.11.18",
+   "platform": "win32",
+   "ram_gb": 15.7
+  },
+  "dataset": {
+   "jobs": 1000,
+   "applications": 300,
+   "events": 1800,
+   "queue_tasks": 200,
+   "interviews": 60
+  },
+  "when": "2026-11-13T05:15:41.814143+00:00",
+  "seed_seconds": 0.1,
+  "memory_rss_mb_idle": 5.1,
+  "latency_sequential": {
+   "/health": {
+    "n": 30,
+    "p50_ms": 0.9,
+    "p95_ms": 1.1,
+    "max_ms": 1.2,
+    "mean_ms": 0.9
+   },
+   "/api/jobs/page?limit=25": {
+    "n": 30,
+    "p50_ms": 13.8,
+    "p95_ms": 17.1,
+    "max_ms": 19.7,
+    "mean_ms": 14.5
+   },
+   "/api/jobs?limit=50": {
+    "n": 30,
+    "p50_ms": 13.3,
+    "p95_ms": 18.1,
+    "max_ms": 18.8,
+    "mean_ms": 13.7
+   },
+   "/api/jobs/page?min_match_score=70&limit=25": {
+    "n": 30,
+    "p50_ms": 19.0,
+    "p95_ms": 22.3,
+    "max_ms": 22.7,
+    "mean_ms": 19.4
+   },
+   "/api/applications/page?limit=25": {
+    "n": 30,
+    "p50_ms": 20.5,
+    "p95_ms": 22.4,
+    "max_ms": 22.6,
+    "mean_ms": 20.8
+   },
+   "/api/applications/page?states=SUBMITTED&states=VERIFIED&q=Company": {
+    "n": 30,
+    "p50_ms": 21.0,
+    "p95_ms": 22.1,
+    "max_ms": 22.2,
+    "mean_ms": 21.1
+   },
+   "/api/dashboard/summary": {
+    "n": 30,
+    "p50_ms": 22.1,
+    "p95_ms": 32.0,
+    "max_ms": 48.2,
+    "mean_ms": 23.6
+   },
+   "/api/analytics/overview": {
+    "n": 30,
+    "p50_ms": 34.4,
+    "p95_ms": 42.4,
+    "max_ms": 45.3,
+    "mean_ms": 35.2
+   },
+   "/api/queue": {
+    "n": 30,
+    "p50_ms": 9.6,
+    "p95_ms": 12.1,
+    "max_ms": 15.2,
+    "mean_ms": 9.8
+   },
+   "/api/interviews?limit=25": {
+    "n": 30,
+    "p50_ms": 3.4,
+    "p95_ms": 5.6,
+    "max_ms": 7.7,
+    "mean_ms": 3.6
+   },
+   "/api/interviews/upcoming": {
+    "n": 30,
+    "p50_ms": 2.4,
+    "p95_ms": 3.0,
+    "max_ms": 3.5,
+    "mean_ms": 2.4
+   },
+   "/api/settings": {
+    "n": 30,
+    "p50_ms": 15.2,
+    "p95_ms": 16.5,
+    "max_ms": 17.0,
+    "mean_ms": 15.3
+   },
+   "/api/scheduler/status": {
+    "n": 30,
+    "p50_ms": 7.0,
+    "p95_ms": 9.4,
+    "max_ms": 11.5,
+    "mean_ms": 7.4
+   },
+   "/api/reports/daily": {
+    "n": 30,
+    "p50_ms": 1.8,
+    "p95_ms": 2.5,
+    "max_ms": 4.9,
+    "mean_ms": 2.0
+   }
+  },
+  "concurrency": {
+   "/api/dashboard/summary": {
+    "n": 200,
+    "p50_ms": 181.6,
+    "p95_ms": 242.5,
+    "max_ms": 283.0,
+    "mean_ms": 181.9,
+    "threads": 20,
+    "requests": 200,
+    "errors": 0,
+    "requests_per_second": 104.9,
+    "api_cpu_seconds": 0.0,
+    "wall_seconds": 1.91
+   },
+   "/api/jobs/page?limit=25": {
+    "n": 200,
+    "p50_ms": 236.4,
+    "p95_ms": 307.2,
+    "max_ms": 363.0,
+    "mean_ms": 231.3,
+    "threads": 20,
+    "requests": 200,
+    "errors": 0,
+    "requests_per_second": 82.4,
+    "api_cpu_seconds": 0.0,
+    "wall_seconds": 2.43
+   },
+   "/api/applications/page?limit=25": {
+    "n": 200,
+    "p50_ms": 382.6,
+    "p95_ms": 473.3,
+    "max_ms": 572.7,
+    "mean_ms": 375.2,
+    "threads": 20,
+    "requests": 200,
+    "errors": 0,
+    "requests_per_second": 51.4,
+    "api_cpu_seconds": 0.0,
+    "wall_seconds": 3.89
+   },
+   "/health": {
+    "n": 200,
+    "p50_ms": 10.9,
+    "p95_ms": 14.6,
+    "max_ms": 34.6,
+    "mean_ms": 10.8,
+    "threads": 20,
+    "requests": 200,
+    "errors": 0,
+    "requests_per_second": 1271.8,
+    "api_cpu_seconds": 0.0,
+    "wall_seconds": 0.16
+   }
+  },
+  "memory_rss_mb_after_load": 5.1,
+  "resume_parsing_ms": {
+   "pdf": {
+    "n": 8,
+    "p50_ms": 16.8,
+    "p95_ms": 88.3,
+    "max_ms": 88.3,
+    "mean_ms": 25.2
+   },
+   "docx": {
+    "n": 1,
+    "p50_ms": 39.6,
+    "p95_ms": 39.6,
+    "max_ms": 39.6,
+    "mean_ms": 39.6
+   }
+  },
+  "matching_ms": {
+   "analyze_jd": {
+    "n": 30,
+    "p50_ms": 8.7,
+    "p95_ms": 10.9,
+    "max_ms": 12.1,
+    "mean_ms": 8.8
+   },
+   "score": {
+    "n": 30,
+    "p50_ms": 9.8,
+    "p95_ms": 16.3,
+    "max_ms": 17.1,
+    "mean_ms": 10.7
+   },
+   "jobs": 30
+  },
+  "memory_rss_mb_end": 5.1,
+  "query_plans": {
+   "jobs by discovered_at (list)": "IXSCAN",
+   "jobs by source": "IXSCAN",
+   "jobs by job_id": "IXSCAN",
+   "applications by state": "IXSCAN",
+   "applications by job": "IXSCAN",
+   "applications by key": "IXSCAN",
+   "events of an application": "IXSCAN",
+   "queue claim": "IXSCAN",
+   "interviews upcoming": "IXSCAN",
+   "matches by job": "IXSCAN",
+   "applications created in range": "COLLSCAN",
+   "jobs discovered in range": "COLLSCAN"
+  },
+  "server_cpu_percent_sample": 2.8,
+  "worker": {
+   "tasks": 200,
+   "seconds": 1.12,
+   "tasks_per_second": 179.2,
+   "parallel_claim": {
+    "threads": 8,
+    "tasks": 200,
+    "unique": 200,
+    "seconds": 0.52
+   }
+  }
+ },
+ "yaml_cache_ab_runs": [
+  {
+   "/api/applications/page?limit=25": {
+    "cache_cleared_p50_ms": 69.0,
+    "cache_on_p50_ms": 28.7,
+    "speedup": 2.41
+   },
+   "/api/jobs/page?limit=25": {
+    "cache_cleared_p50_ms": 54.0,
+    "cache_on_p50_ms": 29.1,
+    "speedup": 1.86
+   },
+   "/api/settings": {
+    "cache_cleared_p50_ms": 65.4,
+    "cache_on_p50_ms": 20.5,
+    "speedup": 3.19
+   },
+   "/api/dashboard/summary": {
+    "cache_cleared_p50_ms": 49.7,
+    "cache_on_p50_ms": 43.5,
+    "speedup": 1.14
+   },
+   "/api/scheduler/status": {
+    "cache_cleared_p50_ms": 18.4,
+    "cache_on_p50_ms": 18.4,
+    "speedup": 1.0
+   },
+   "/api/queue": {
+    "cache_cleared_p50_ms": 40.5,
+    "cache_on_p50_ms": 44.6,
+    "speedup": 0.91
+   }
+  },
+  {
+   "/api/applications/page?limit=25": {
+    "cache_cleared_p50_ms": 64.8,
+    "cache_on_p50_ms": 25.6,
+    "speedup": 2.53
+   },
+   "/api/jobs/page?limit=25": {
+    "cache_cleared_p50_ms": 58.5,
+    "cache_on_p50_ms": 29.8,
+    "speedup": 1.96
+   },
+   "/api/settings": {
+    "cache_cleared_p50_ms": 55.2,
+    "cache_on_p50_ms": 17.9,
+    "speedup": 3.08
+   },
+   "/api/dashboard/summary": {
+    "cache_cleared_p50_ms": 45.3,
+    "cache_on_p50_ms": 39.7,
+    "speedup": 1.14
+   },
+   "/api/scheduler/status": {
+    "cache_cleared_p50_ms": 21.8,
+    "cache_on_p50_ms": 26.1,
+    "speedup": 0.83
+   },
+   "/api/queue": {
+    "cache_cleared_p50_ms": 41.1,
+    "cache_on_p50_ms": 39.7,
+    "speedup": 1.03
+   }
+  },
+  {
+   "/api/applications/page?limit=25": {
+    "cache_cleared_p50_ms": 67.3,
+    "cache_on_p50_ms": 25.9,
+    "speedup": 2.6
+   },
+   "/api/jobs/page?limit=25": {
+    "cache_cleared_p50_ms": 49.4,
+    "cache_on_p50_ms": 24.4,
+    "speedup": 2.02
+   },
+   "/api/settings": {
+    "cache_cleared_p50_ms": 59.8,
+    "cache_on_p50_ms": 19.3,
+    "speedup": 3.09
+   },
+   "/api/dashboard/summary": {
+    "cache_cleared_p50_ms": 43.0,
+    "cache_on_p50_ms": 38.6,
+    "speedup": 1.11
+   },
+   "/api/scheduler/status": {
+    "cache_cleared_p50_ms": 31.7,
+    "cache_on_p50_ms": 31.6,
+    "speedup": 1.01
+   },
+   "/api/queue": {
+    "cache_cleared_p50_ms": 40.2,
+    "cache_on_p50_ms": 36.4,
+    "speedup": 1.1
+   }
+  }
+ ],
+ "after_runs_with_ab": [
+  {
+   "machine": {
+    "cpu_count": 16,
+    "python": "3.11.18",
+    "platform": "win32",
+    "ram_gb": 15.7
+   },
+   "dataset": {
+    "jobs": 1000,
+    "applications": 300,
+    "events": 1800,
+    "queue_tasks": 200,
+    "interviews": 60
+   },
+   "when": "2026-11-13T05:20:12.479653+00:00",
+   "seed_seconds": 0.13,
+   "memory_rss_mb_idle": 120.2,
+   "latency_sequential": {
+    "/health": {
+     "n": 30,
+     "p50_ms": 1.0,
+     "p95_ms": 1.3,
+     "max_ms": 1.3,
+     "mean_ms": 1.0
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 30,
+     "p50_ms": 7.1,
+     "p95_ms": 10.5,
+     "max_ms": 10.7,
+     "mean_ms": 7.5
+    },
+    "/api/jobs?limit=50": {
+     "n": 30,
+     "p50_ms": 6.0,
+     "p95_ms": 9.7,
+     "max_ms": 10.0,
+     "mean_ms": 6.4
+    },
+    "/api/jobs/page?min_match_score=70&limit=25": {
+     "n": 30,
+     "p50_ms": 14.3,
+     "p95_ms": 25.4,
+     "max_ms": 27.1,
+     "mean_ms": 16.2
+    },
+    "/api/applications/page?limit=25": {
+     "n": 30,
+     "p50_ms": 6.9,
+     "p95_ms": 8.5,
+     "max_ms": 9.7,
+     "mean_ms": 7.0
+    },
+    "/api/applications/page?states=SUBMITTED&states=VERIFIED&q=Company": {
+     "n": 30,
+     "p50_ms": 7.3,
+     "p95_ms": 9.3,
+     "max_ms": 10.6,
+     "mean_ms": 7.7
+    },
+    "/api/dashboard/summary": {
+     "n": 30,
+     "p50_ms": 38.8,
+     "p95_ms": 58.9,
+     "max_ms": 74.9,
+     "mean_ms": 40.0
+    },
+    "/api/analytics/overview": {
+     "n": 30,
+     "p50_ms": 52.1,
+     "p95_ms": 102.3,
+     "max_ms": 105.8,
+     "mean_ms": 59.0
+    },
+    "/api/queue": {
+     "n": 30,
+     "p50_ms": 24.2,
+     "p95_ms": 48.6,
+     "max_ms": 50.7,
+     "mean_ms": 27.3
+    },
+    "/api/interviews?limit=25": {
+     "n": 30,
+     "p50_ms": 11.0,
+     "p95_ms": 18.5,
+     "max_ms": 19.7,
+     "mean_ms": 11.2
+    },
+    "/api/interviews/upcoming": {
+     "n": 30,
+     "p50_ms": 5.7,
+     "p95_ms": 9.1,
+     "max_ms": 9.6,
+     "mean_ms": 6.4
+    },
+    "/api/settings": {
+     "n": 30,
+     "p50_ms": 8.3,
+     "p95_ms": 14.8,
+     "max_ms": 18.1,
+     "mean_ms": 9.2
+    },
+    "/api/scheduler/status": {
+     "n": 30,
+     "p50_ms": 10.9,
+     "p95_ms": 21.1,
+     "max_ms": 33.3,
+     "mean_ms": 13.4
+    },
+    "/api/reports/daily": {
+     "n": 30,
+     "p50_ms": 4.9,
+     "p95_ms": 8.0,
+     "max_ms": 8.2,
+     "mean_ms": 4.9
+    }
+   },
+   "concurrency": {
+    "/api/dashboard/summary": {
+     "n": 200,
+     "p50_ms": 601.7,
+     "p95_ms": 965.6,
+     "max_ms": 1098.7,
+     "mean_ms": 621.5,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 30.2,
+     "api_cpu_seconds": 6.03,
+     "wall_seconds": 6.61
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 200,
+     "p50_ms": 255.3,
+     "p95_ms": 405.2,
+     "max_ms": 448.9,
+     "mean_ms": 249.4,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 72.1,
+     "api_cpu_seconds": 2.86,
+     "wall_seconds": 2.77
+    },
+    "/api/applications/page?limit=25": {
+     "n": 200,
+     "p50_ms": 282.2,
+     "p95_ms": 463.4,
+     "max_ms": 543.1,
+     "mean_ms": 290.5,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 62.3,
+     "api_cpu_seconds": 3.33,
+     "wall_seconds": 3.21
+    },
+    "/health": {
+     "n": 200,
+     "p50_ms": 55.5,
+     "p95_ms": 72.9,
+     "max_ms": 92.6,
+     "mean_ms": 53.8,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 279.4,
+     "api_cpu_seconds": 0.45,
+     "wall_seconds": 0.72
+    }
+   },
+   "memory_rss_mb_after_load": 140.1,
+   "resume_parsing_ms": {
+    "pdf": {
+     "n": 8,
+     "p50_ms": 47.1,
+     "p95_ms": 154.0,
+     "max_ms": 154.0,
+     "mean_ms": 61.1
+    },
+    "docx": {
+     "n": 1,
+     "p50_ms": 125.2,
+     "p95_ms": 125.2,
+     "max_ms": 125.2,
+     "mean_ms": 125.2
+    }
+   },
+   "matching_ms": {
+    "analyze_jd": {
+     "n": 30,
+     "p50_ms": 8.0,
+     "p95_ms": 20.5,
+     "max_ms": 22.1,
+     "mean_ms": 10.7
+    },
+    "score": {
+     "n": 30,
+     "p50_ms": 10.9,
+     "p95_ms": 24.2,
+     "max_ms": 26.0,
+     "mean_ms": 13.6
+    },
+    "jobs": 30
+   },
+   "memory_rss_mb_end": 143.9,
+   "query_plans": {
+    "jobs by discovered_at (list)": "IXSCAN",
+    "jobs by source": "IXSCAN",
+    "jobs by job_id": "IXSCAN",
+    "applications by state": "IXSCAN",
+    "applications by job": "IXSCAN",
+    "applications by key": "IXSCAN",
+    "events of an application": "IXSCAN",
+    "queue claim": "IXSCAN",
+    "interviews upcoming": "IXSCAN",
+    "matches by job": "IXSCAN",
+    "applications created in range": "IXSCAN",
+    "jobs discovered in range": "IXSCAN"
+   },
+   "server_cpu_percent_sample": 17.6,
+   "worker": {
+    "tasks": 200,
+    "seconds": 2.26,
+    "tasks_per_second": 88.7,
+    "parallel_claim": {
+     "threads": 8,
+     "tasks": 200,
+     "unique": 200,
+     "seconds": 0.39
+    }
+   },
+   "yaml_cache_ab": {
+    "/api/applications/page?limit=25": {
+     "cache_cleared_p50_ms": 69.0,
+     "cache_on_p50_ms": 28.7,
+     "speedup": 2.41
+    },
+    "/api/jobs/page?limit=25": {
+     "cache_cleared_p50_ms": 54.0,
+     "cache_on_p50_ms": 29.1,
+     "speedup": 1.86
+    },
+    "/api/settings": {
+     "cache_cleared_p50_ms": 65.4,
+     "cache_on_p50_ms": 20.5,
+     "speedup": 3.19
+    },
+    "/api/dashboard/summary": {
+     "cache_cleared_p50_ms": 49.7,
+     "cache_on_p50_ms": 43.5,
+     "speedup": 1.14
+    },
+    "/api/scheduler/status": {
+     "cache_cleared_p50_ms": 18.4,
+     "cache_on_p50_ms": 18.4,
+     "speedup": 1.0
+    },
+    "/api/queue": {
+     "cache_cleared_p50_ms": 40.5,
+     "cache_on_p50_ms": 44.6,
+     "speedup": 0.91
+    }
+   }
+  },
+  {
+   "machine": {
+    "cpu_count": 16,
+    "python": "3.11.18",
+    "platform": "win32",
+    "ram_gb": 15.7
+   },
+   "dataset": {
+    "jobs": 1000,
+    "applications": 300,
+    "events": 1800,
+    "queue_tasks": 200,
+    "interviews": 60
+   },
+   "when": "2026-11-13T05:21:02.786988+00:00",
+   "seed_seconds": 0.1,
+   "memory_rss_mb_idle": 120.0,
+   "latency_sequential": {
+    "/health": {
+     "n": 30,
+     "p50_ms": 1.0,
+     "p95_ms": 1.3,
+     "max_ms": 1.4,
+     "mean_ms": 1.0
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 30,
+     "p50_ms": 6.9,
+     "p95_ms": 14.0,
+     "max_ms": 14.3,
+     "mean_ms": 7.6
+    },
+    "/api/jobs?limit=50": {
+     "n": 30,
+     "p50_ms": 6.3,
+     "p95_ms": 10.0,
+     "max_ms": 10.8,
+     "mean_ms": 6.7
+    },
+    "/api/jobs/page?min_match_score=70&limit=25": {
+     "n": 30,
+     "p50_ms": 13.7,
+     "p95_ms": 20.7,
+     "max_ms": 22.3,
+     "mean_ms": 14.2
+    },
+    "/api/applications/page?limit=25": {
+     "n": 30,
+     "p50_ms": 7.2,
+     "p95_ms": 9.2,
+     "max_ms": 10.1,
+     "mean_ms": 7.2
+    },
+    "/api/applications/page?states=SUBMITTED&states=VERIFIED&q=Company": {
+     "n": 30,
+     "p50_ms": 7.6,
+     "p95_ms": 9.9,
+     "max_ms": 13.7,
+     "mean_ms": 7.9
+    },
+    "/api/dashboard/summary": {
+     "n": 30,
+     "p50_ms": 27.2,
+     "p95_ms": 49.5,
+     "max_ms": 52.8,
+     "mean_ms": 30.9
+    },
+    "/api/analytics/overview": {
+     "n": 30,
+     "p50_ms": 66.1,
+     "p95_ms": 94.6,
+     "max_ms": 124.5,
+     "mean_ms": 67.5
+    },
+    "/api/queue": {
+     "n": 30,
+     "p50_ms": 21.4,
+     "p95_ms": 32.9,
+     "max_ms": 56.9,
+     "mean_ms": 23.9
+    },
+    "/api/interviews?limit=25": {
+     "n": 30,
+     "p50_ms": 12.5,
+     "p95_ms": 19.2,
+     "max_ms": 20.1,
+     "mean_ms": 12.4
+    },
+    "/api/interviews/upcoming": {
+     "n": 30,
+     "p50_ms": 5.8,
+     "p95_ms": 10.3,
+     "max_ms": 11.9,
+     "mean_ms": 6.5
+    },
+    "/api/settings": {
+     "n": 30,
+     "p50_ms": 8.2,
+     "p95_ms": 18.2,
+     "max_ms": 20.3,
+     "mean_ms": 9.5
+    },
+    "/api/scheduler/status": {
+     "n": 30,
+     "p50_ms": 14.4,
+     "p95_ms": 29.8,
+     "max_ms": 36.8,
+     "mean_ms": 16.9
+    },
+    "/api/reports/daily": {
+     "n": 30,
+     "p50_ms": 6.9,
+     "p95_ms": 13.9,
+     "max_ms": 15.9,
+     "mean_ms": 7.9
+    }
+   },
+   "concurrency": {
+    "/api/dashboard/summary": {
+     "n": 200,
+     "p50_ms": 155.7,
+     "p95_ms": 638.2,
+     "max_ms": 749.5,
+     "mean_ms": 245.8,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 75.9,
+     "api_cpu_seconds": 2.77,
+     "wall_seconds": 2.63
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 200,
+     "p50_ms": 82.2,
+     "p95_ms": 103.0,
+     "max_ms": 109.7,
+     "mean_ms": 78.9,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 234.0,
+     "api_cpu_seconds": 0.97,
+     "wall_seconds": 0.85
+    },
+    "/api/applications/page?limit=25": {
+     "n": 200,
+     "p50_ms": 90.6,
+     "p95_ms": 163.6,
+     "max_ms": 194.9,
+     "mean_ms": 99.1,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 193.4,
+     "api_cpu_seconds": 1.39,
+     "wall_seconds": 1.03
+    },
+    "/health": {
+     "n": 200,
+     "p50_ms": 16.2,
+     "p95_ms": 27.4,
+     "max_ms": 46.1,
+     "mean_ms": 16.6,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 975.1,
+     "api_cpu_seconds": 0.22,
+     "wall_seconds": 0.21
+    }
+   },
+   "memory_rss_mb_after_load": 139.8,
+   "resume_parsing_ms": {
+    "pdf": {
+     "n": 8,
+     "p50_ms": 16.6,
+     "p95_ms": 45.9,
+     "max_ms": 45.9,
+     "mean_ms": 20.5
+    },
+    "docx": {
+     "n": 1,
+     "p50_ms": 41.5,
+     "p95_ms": 41.5,
+     "max_ms": 41.5,
+     "mean_ms": 41.5
+    }
+   },
+   "matching_ms": {
+    "analyze_jd": {
+     "n": 30,
+     "p50_ms": 5.1,
+     "p95_ms": 13.6,
+     "max_ms": 14.6,
+     "mean_ms": 6.9
+    },
+    "score": {
+     "n": 30,
+     "p50_ms": 6.4,
+     "p95_ms": 18.4,
+     "max_ms": 22.3,
+     "mean_ms": 9.0
+    },
+    "jobs": 30
+   },
+   "memory_rss_mb_end": 144.7,
+   "query_plans": {
+    "jobs by discovered_at (list)": "IXSCAN",
+    "jobs by source": "IXSCAN",
+    "jobs by job_id": "IXSCAN",
+    "applications by state": "IXSCAN",
+    "applications by job": "IXSCAN",
+    "applications by key": "IXSCAN",
+    "events of an application": "IXSCAN",
+    "queue claim": "IXSCAN",
+    "interviews upcoming": "IXSCAN",
+    "matches by job": "IXSCAN",
+    "applications created in range": "IXSCAN",
+    "jobs discovered in range": "IXSCAN"
+   },
+   "server_cpu_percent_sample": 9.3,
+   "worker": {
+    "tasks": 200,
+    "seconds": 1.73,
+    "tasks_per_second": 115.4,
+    "parallel_claim": {
+     "threads": 8,
+     "tasks": 200,
+     "unique": 200,
+     "seconds": 0.39
+    }
+   },
+   "yaml_cache_ab": {
+    "/api/applications/page?limit=25": {
+     "cache_cleared_p50_ms": 64.8,
+     "cache_on_p50_ms": 25.6,
+     "speedup": 2.53
+    },
+    "/api/jobs/page?limit=25": {
+     "cache_cleared_p50_ms": 58.5,
+     "cache_on_p50_ms": 29.8,
+     "speedup": 1.96
+    },
+    "/api/settings": {
+     "cache_cleared_p50_ms": 55.2,
+     "cache_on_p50_ms": 17.9,
+     "speedup": 3.08
+    },
+    "/api/dashboard/summary": {
+     "cache_cleared_p50_ms": 45.3,
+     "cache_on_p50_ms": 39.7,
+     "speedup": 1.14
+    },
+    "/api/scheduler/status": {
+     "cache_cleared_p50_ms": 21.8,
+     "cache_on_p50_ms": 26.1,
+     "speedup": 0.83
+    },
+    "/api/queue": {
+     "cache_cleared_p50_ms": 41.1,
+     "cache_on_p50_ms": 39.7,
+     "speedup": 1.03
+    }
+   }
+  },
+  {
+   "machine": {
+    "cpu_count": 16,
+    "python": "3.11.18",
+    "platform": "win32",
+    "ram_gb": 15.7
+   },
+   "dataset": {
+    "jobs": 1000,
+    "applications": 300,
+    "events": 1800,
+    "queue_tasks": 200,
+    "interviews": 60
+   },
+   "when": "2026-11-13T05:21:42.442559+00:00",
+   "seed_seconds": 0.15,
+   "memory_rss_mb_idle": 120.3,
+   "latency_sequential": {
+    "/health": {
+     "n": 30,
+     "p50_ms": 1.0,
+     "p95_ms": 1.3,
+     "max_ms": 1.3,
+     "mean_ms": 1.0
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 30,
+     "p50_ms": 6.8,
+     "p95_ms": 9.6,
+     "max_ms": 12.2,
+     "mean_ms": 7.3
+    },
+    "/api/jobs?limit=50": {
+     "n": 30,
+     "p50_ms": 5.7,
+     "p95_ms": 9.9,
+     "max_ms": 10.1,
+     "mean_ms": 6.4
+    },
+    "/api/jobs/page?min_match_score=70&limit=25": {
+     "n": 30,
+     "p50_ms": 13.4,
+     "p95_ms": 22.5,
+     "max_ms": 24.7,
+     "mean_ms": 14.0
+    },
+    "/api/applications/page?limit=25": {
+     "n": 30,
+     "p50_ms": 7.1,
+     "p95_ms": 8.8,
+     "max_ms": 10.9,
+     "mean_ms": 7.4
+    },
+    "/api/applications/page?states=SUBMITTED&states=VERIFIED&q=Company": {
+     "n": 30,
+     "p50_ms": 7.2,
+     "p95_ms": 9.8,
+     "max_ms": 10.9,
+     "mean_ms": 7.6
+    },
+    "/api/dashboard/summary": {
+     "n": 30,
+     "p50_ms": 27.4,
+     "p95_ms": 70.2,
+     "max_ms": 70.4,
+     "mean_ms": 33.6
+    },
+    "/api/analytics/overview": {
+     "n": 30,
+     "p50_ms": 53.4,
+     "p95_ms": 93.1,
+     "max_ms": 97.1,
+     "mean_ms": 58.0
+    },
+    "/api/queue": {
+     "n": 30,
+     "p50_ms": 22.9,
+     "p95_ms": 36.5,
+     "max_ms": 40.6,
+     "mean_ms": 24.2
+    },
+    "/api/interviews?limit=25": {
+     "n": 30,
+     "p50_ms": 5.4,
+     "p95_ms": 11.9,
+     "max_ms": 13.5,
+     "mean_ms": 6.4
+    },
+    "/api/interviews/upcoming": {
+     "n": 30,
+     "p50_ms": 4.6,
+     "p95_ms": 8.4,
+     "max_ms": 8.6,
+     "mean_ms": 5.0
+    },
+    "/api/settings": {
+     "n": 30,
+     "p50_ms": 9.2,
+     "p95_ms": 19.1,
+     "max_ms": 22.5,
+     "mean_ms": 11.0
+    },
+    "/api/scheduler/status": {
+     "n": 30,
+     "p50_ms": 13.2,
+     "p95_ms": 25.1,
+     "max_ms": 25.3,
+     "mean_ms": 14.1
+    },
+    "/api/reports/daily": {
+     "n": 30,
+     "p50_ms": 2.9,
+     "p95_ms": 3.9,
+     "max_ms": 7.9,
+     "mean_ms": 3.0
+    }
+   },
+   "concurrency": {
+    "/api/dashboard/summary": {
+     "n": 200,
+     "p50_ms": 537.5,
+     "p95_ms": 748.7,
+     "max_ms": 873.7,
+     "mean_ms": 539.2,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 35.1,
+     "api_cpu_seconds": 5.39,
+     "wall_seconds": 5.69
+    },
+    "/api/jobs/page?limit=25": {
+     "n": 200,
+     "p50_ms": 307.8,
+     "p95_ms": 483.3,
+     "max_ms": 588.9,
+     "mean_ms": 301.8,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 59.7,
+     "api_cpu_seconds": 3.34,
+     "wall_seconds": 3.35
+    },
+    "/api/applications/page?limit=25": {
+     "n": 200,
+     "p50_ms": 338.4,
+     "p95_ms": 497.1,
+     "max_ms": 577.0,
+     "mean_ms": 350.2,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 53.7,
+     "api_cpu_seconds": 3.5,
+     "wall_seconds": 3.72
+    },
+    "/health": {
+     "n": 200,
+     "p50_ms": 62.5,
+     "p95_ms": 169.6,
+     "max_ms": 186.0,
+     "mean_ms": 71.6,
+     "threads": 20,
+     "requests": 200,
+     "errors": 0,
+     "requests_per_second": 230.0,
+     "api_cpu_seconds": 0.56,
+     "wall_seconds": 0.87
+    }
+   },
+   "memory_rss_mb_after_load": 140.3,
+   "resume_parsing_ms": {
+    "pdf": {
+     "n": 8,
+     "p50_ms": 54.7,
+     "p95_ms": 166.7,
+     "max_ms": 166.7,
+     "mean_ms": 64.3
+    },
+    "docx": {
+     "n": 1,
+     "p50_ms": 107.3,
+     "p95_ms": 107.3,
+     "max_ms": 107.3,
+     "mean_ms": 107.3
+    }
+   },
+   "matching_ms": {
+    "analyze_jd": {
+     "n": 30,
+     "p50_ms": 14.7,
+     "p95_ms": 23.8,
+     "max_ms": 34.3,
+     "mean_ms": 16.0
+    },
+    "score": {
+     "n": 30,
+     "p50_ms": 19.7,
+     "p95_ms": 26.1,
+     "max_ms": 27.5,
+     "mean_ms": 19.8
+    },
+    "jobs": 30
+   },
+   "memory_rss_mb_end": 142.7,
+   "query_plans": {
+    "jobs by discovered_at (list)": "IXSCAN",
+    "jobs by source": "IXSCAN",
+    "jobs by job_id": "IXSCAN",
+    "applications by state": "IXSCAN",
+    "applications by job": "IXSCAN",
+    "applications by key": "IXSCAN",
+    "events of an application": "IXSCAN",
+    "queue claim": "IXSCAN",
+    "interviews upcoming": "IXSCAN",
+    "matches by job": "IXSCAN",
+    "applications created in range": "IXSCAN",
+    "jobs discovered in range": "IXSCAN"
+   },
+   "server_cpu_percent_sample": 14.4,
+   "worker": {
+    "tasks": 200,
+    "seconds": 3.11,
+    "tasks_per_second": 64.3,
+    "parallel_claim": {
+     "threads": 8,
+     "tasks": 200,
+     "unique": 200,
+     "seconds": 0.51
+    }
+   },
+   "yaml_cache_ab": {
+    "/api/applications/page?limit=25": {
+     "cache_cleared_p50_ms": 67.3,
+     "cache_on_p50_ms": 25.9,
+     "speedup": 2.6
+    },
+    "/api/jobs/page?limit=25": {
+     "cache_cleared_p50_ms": 49.4,
+     "cache_on_p50_ms": 24.4,
+     "speedup": 2.02
+    },
+    "/api/settings": {
+     "cache_cleared_p50_ms": 59.8,
+     "cache_on_p50_ms": 19.3,
+     "speedup": 3.09
+    },
+    "/api/dashboard/summary": {
+     "cache_cleared_p50_ms": 43.0,
+     "cache_on_p50_ms": 38.6,
+     "speedup": 1.11
+    },
+    "/api/scheduler/status": {
+     "cache_cleared_p50_ms": 31.7,
+     "cache_on_p50_ms": 31.6,
+     "speedup": 1.01
+    },
+    "/api/queue": {
+     "cache_cleared_p50_ms": 40.2,
+     "cache_on_p50_ms": 36.4,
+     "speedup": 1.1
+    }
+   }
+  }
+ ]
+}

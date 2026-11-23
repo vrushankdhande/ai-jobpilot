@@ -1,0 +1,108 @@
+# Job-source capability registry (Phase 4). FAIL CLOSED: a source that is missing here, or has an invalid
+# status, is treated as DISABLED. A publicly visible page is NOT assumed to permit automated extraction.
+#
+# discovery_status: ENABLED | MANUAL_ONLY | DISABLED | PENDING_POLICY_REVIEW
+#   ENABLED                 automated discovery through a documented/authorised method only
+#   MANUAL_ONLY             no automated access; the user may import a job they found themselves (nothing is fetched)
+#   DISABLED                nothing is allowed
+#   PENDING_POLICY_REVIEW   treated as disabled for automation until a human confirms the policy
+# manual_import: may the user paste/import a job from this source? (independent of automated discovery)
+#
+# REVIEW BASIS: desk research on 2026-11-12 (web search over each platform's published terms/documentation and
+# secondary summaries; the full legal texts were not read). This is NOT legal advice - confirm yourself before
+# changing any status. Even if a status is edited to ENABLED, the code has no automated method for LinkedIn,
+# Indeed or Naukri, so it still refuses.
+user_agent: "AI-JobPilot/0.4 (personal job-search assistant; honours robots.txt)"
+
+linkedin:
+  auto_apply: false
+  discovery_status: MANUAL_ONLY
+  manual_import: true
+  allowed_hosts: [linkedin.com, www.linkedin.com, in.linkedin.com]
+  requests_per_minute: 0
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: true
+  basis: >-
+    The LinkedIn User Agreement is reported to prohibit scripts, robots, crawlers and other automated means of
+    collecting data. No public job-search API was found; job APIs are partner-only. Use manual import.
+
+naukri:
+  auto_apply: false
+  discovery_status: PENDING_POLICY_REVIEW
+  manual_import: true
+  allowed_hosts: [naukri.com, www.naukri.com]
+  requests_per_minute: 0
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: true
+  basis: >-
+    Naukri's terms list crawling/scraping by automated means as prohibited conduct, and no official public job-search
+    API was found. Kept disabled for automation until a human verifies the policy; manual import is allowed.
+
+indeed:
+  auto_apply: false
+  discovery_status: MANUAL_ONLY
+  manual_import: true
+  allowed_hosts: [indeed.com, www.indeed.com, in.indeed.com]
+  requests_per_minute: 0
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: true
+  basis: >-
+    Indeed's terms are reported to prohibit robots/spiders and scraping; its APIs are partner-only (developer
+    agreement). Use manual import.
+
+instahyre:
+  auto_apply: false
+  discovery_status: MANUAL_ONLY
+  manual_import: true
+  allowed_hosts: [instahyre.com, www.instahyre.com]
+  requests_per_minute: 0
+  reviewed_on: "2026-11-21"
+  needs_human_confirmation: true
+  basis: >-
+    No public job-search API was found for Instahyre and its terms were NOT reviewed by a human, so nothing is automated.
+    Use manual import (the link is stored, never requested).
+
+manual:
+  auto_apply: false
+  discovery_status: MANUAL_ONLY
+  manual_import: true
+  requests_per_minute: 0
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: false
+  basis: "Jobs the user found themselves and entered by hand. The URL is stored but never requested."
+
+career_pages:
+  auto_apply: true
+  discovery_status: ENABLED          # only for companies you list in config/career_sources.yaml
+  manual_import: true
+  requests_per_minute: 20
+  max_requests_per_run: 150
+  max_jobs_per_run: 300
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: true
+  basis: >-
+    Company career data is read only through documented public read APIs (Greenhouse, Lever) or - for pages you
+    explicitly approve - structured JobPosting data on pages that robots.txt allows. Nothing is guessed or crawled blindly.
+  providers:
+    greenhouse:
+      discovery_status: ENABLED
+      allowed_hosts: [boards-api.greenhouse.io]
+      requests_per_minute: 30
+      max_response_bytes: 40000000     # a large company's full board (with descriptions) is tens of MB; default is 5 MB, ceiling 60 MB
+      basis: "Greenhouse Job Board API: public GET endpoints (list/detail) documented for published jobs; no authentication."
+    lever:
+      discovery_status: ENABLED
+      allowed_hosts: [api.lever.co, api.eu.lever.co]
+      requests_per_minute: 30
+      max_response_bytes: 40000000     # same reason as Greenhouse: a large company's full listing exceeds the 5 MB default
+      basis: "Lever public Postings API (published postings). Documentation was confirmed via secondary sources only."
+    workday:
+      discovery_status: PENDING_POLICY_REVIEW
+      allowed_hosts: []
+      requests_per_minute: 0
+      basis: "No documented public API; the career-site JSON endpoints are not an approved integration."
+    generic_page:
+      discovery_status: ENABLED          # per company: needs `approved: true` in career_sources.yaml AND robots.txt allow
+      requests_per_minute: 12
+      require_robots_txt: true
+      basis: "Only structured JobPosting data (JSON-LD) on pages the user approved and robots.txt permits."

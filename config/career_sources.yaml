@@ -1,0 +1,58 @@
+# Companies whose public career data AI JobPilot may read automatically.
+# Empty by default: nothing is discovered until YOU list a company (fail closed).
+#
+# companies:
+#   - name: Example Corp
+#     ats: greenhouse            # greenhouse | lever | workday | generic   (omit to auto-detect from careers_url)
+#     board_token: examplecorp   # Greenhouse board token or Lever site slug
+#   - name: Another Co
+#     ats: generic
+#     careers_url: https://careers.another.example/jobs
+#     approved: true             # generic pages only: you confirmed that site's terms allow automated reading
+#     sitemap: false             # true = discover job pages from /sitemap.xml instead of links on the page
+# Added on request: public Greenhouse job boards (documented public API) that were checked to have AI / ML / data roles in India or remote.
+# Remove any entry to stop reading that company.
+companies:
+  - {name: Databricks, ats: greenhouse, board_token: databricks}
+  - {name: GitLab, ats: greenhouse, board_token: gitlab}
+  - {name: Twilio, ats: greenhouse, board_token: twilio}
+  - {name: Coinbase, ats: greenhouse, board_token: coinbase}
+  - {name: Pinterest, ats: greenhouse, board_token: pinterest}
+  - {name: Reddit, ats: greenhouse, board_token: reddit}
+  - {name: Samsara, ats: greenhouse, board_token: samsara}
+  - {name: Airbnb, ats: greenhouse, board_token: airbnb}
+  - {name: Anthropic, ats: greenhouse, board_token: anthropic}
+  - {name: MongoDB, ats: greenhouse, board_token: mongodb}
+  - {name: Elastic, ats: greenhouse, board_token: elastic}
+  - {name: Stripe, ats: greenhouse, board_token: stripe}
+  # Added 2026-11-21: public Greenhouse boards checked that day to list AI / ML / data roles in India.
+  - {name: Rubrik, ats: greenhouse, board_token: rubrik}
+  - {name: Zscaler, ats: greenhouse, board_token: zscaler}
+  - {name: InMobi, ats: greenhouse, board_token: inmobi}
+  - {name: Glance, ats: greenhouse, board_token: glance}
+  - {name: Sigmoid, ats: greenhouse, board_token: sigmoid}
+  - {name: Glean, ats: greenhouse, board_token: gleanwork}
+  - {name: Turing, ats: greenhouse, board_token: turing}
+  - {name: 6sense, ats: greenhouse, board_token: 6sense}
+  - {name: Okta, ats: greenhouse, board_token: okta}
+  - {name: Celonis, ats: greenhouse, board_token: celonis}
+  - {name: Zeta Global, ats: greenhouse, board_token: zetaglobal}
+  - {name: Starburst, ats: greenhouse, board_token: starburst}
+  - {name: Netskope, ats: greenhouse, board_token: netskope}
+  - {name: NICE, ats: greenhouse, board_token: nice}
+  - {name: Point72, ats: greenhouse, board_token: point72}
+  - {name: Five9, ats: greenhouse, board_token: five9}
+  - {name: Paytm, ats: lever, board_token: paytm}
+  # Added 2026-11-23: public boards checked that day to list AI / ML / data roles in an Indian city.
+  - {name: PubMatic, ats: greenhouse, board_token: pubmatic}
+  - {name: DeepIntent, ats: greenhouse, board_token: deepintent}
+  - {name: Mindtickle, ats: lever, board_token: mindtickle}
+  - {name: Meesho, ats: lever, board_token: meesho}
+  - {name: Zenoti, ats: greenhouse, board_token: zenoti}
+  - {name: HackerRank, ats: greenhouse, board_token: hackerrank}
+  - {name: KKR, ats: greenhouse, board_token: stage}
+  - {name: Outreach, ats: lever, board_token: outreach}
+  - {name: Netradyne, ats: greenhouse, board_token: netradyne}
+  - {name: Toast, ats: greenhouse, board_token: toast}
+  - {name: FamPay, ats: lever, board_token: fampay}
+  - {name: Zeta, ats: lever, board_token: zeta}

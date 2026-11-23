@@ -1,0 +1,27 @@
+# Automation limits. These are HARD CAPS: the dashboard may lower them for a day-to-day setting, never raise them above these values.
+# Nothing here can make the system submit without your approval, bypass a platform's limits, or create duplicate applications.
+
+# --- Phase 6 (kept as-is) ---
+max_applications_per_day: 20              # automated submissions per day (each one is approved by you first)
+max_applications_per_platform_per_day: 10
+delay_seconds_between_actions: [3, 8]     # courtesy pause between actions on a site (the minimum is used)
+
+# --- Phase 7 ---
+daily_application_target: 25              # a goal to aim for (20-30), NOT a quota: limits, permissions, eligibility and your approvals always win
+max_jobs_discovered_per_day: 300
+max_jobs_processed_per_day: 60            # jobs the worker prepares applications for per day
+max_retries_per_application: 3            # recoverable failures only; an uncertain submission is never retried
+retry_backoff_seconds: 60                 # first retry delay; doubles each attempt (capped at 1 hour)
+max_concurrent_workers: 1
+min_match_score: 70                       # below this a job is not queued (chosen by the user: eligible and 70+)
+queue_lease_seconds: 900                  # a task stuck "processing" longer than this is recovered after a crash
+
+# Local-time windows (timezone below). Outside them the scheduler/worker do nothing; manual runs ignore the discovery window.
+discovery_window: ["06:00", "22:00"]
+application_window: ["09:00", "21:00"]
+
+scheduler:
+  timezone: Asia/Kolkata
+  discovery_time: "07:00"                 # daily discovery run
+  report_time: "20:00"                    # daily report (and e-mail, if configured)
+  catchup_grace_minutes: 240              # after a restart, a missed run is made up only if it was due within this long ago

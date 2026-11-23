@@ -1,0 +1,14 @@
+{
+  "name": "ai-jobpilot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Convenience scripts so npm commands also work from the project root. The dashboard itself lives in web/ (it has its own package.json and dependencies).",
+  "scripts": {
+    "install:web": "npm --prefix web install",
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "start": "npm --prefix web start",
+    "test": "npm --prefix web test",
+    "typecheck": "npm --prefix web run typecheck"
+  }
+}

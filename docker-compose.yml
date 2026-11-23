@@ -1,0 +1,114 @@
+# AI JobPilot - production-style deployment: MongoDB (authenticated, private) + API (private) + web dashboard (React, localhost only).
+#
+#   1. copy .env.example to .env and fill in the REQUIRED values (compose refuses to start without them)
+#   2. docker compose build
+#   3. docker compose up -d
+#   4. open http://localhost:8501
+#
+# Only the web dashboard is published, and only on 127.0.0.1. MongoDB and the API are reachable from inside the compose network only.
+# Secrets come from .env at run time; they are never written into an image or into this file.
+
+x-app-env: &app-env
+  APP_ENV: production
+  DEBUG: "false"
+  API_HOST: 0.0.0.0
+  MONGODB_URI: mongodb://${MONGO_ROOT_USER:?set MONGO_ROOT_USER in .env}:${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env}@mongo:27017/?authSource=admin
+  MONGODB_DATABASE: ${MONGODB_DATABASE:-ai_jobpilot}
+  ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env (24+ random characters)}
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env (16+ random characters)}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+  SCHEDULER_TIMEZONE: ${SCHEDULER_TIMEZONE:-Asia/Kolkata}
+  SCHEDULER_AUTOSTART: ${SCHEDULER_AUTOSTART:-false}
+  NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-false}
+  NOTIFICATION_RECIPIENT: ${NOTIFICATION_RECIPIENT:-}
+  APPLICATION_AUTOMATION_ENABLED: ${APPLICATION_AUTOMATION_ENABLED:-false}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_FILE: logs/app.log
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-hardening: &hardening
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?set MONGO_ROOT_USER in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env}
+    command: ["--auth", "--bind_ip_all"]
+    volumes:
+      - mongo_data:/data/db
+    expose: ["27017"]          # NOT published to the host
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "-u", "$${MONGO_INITDB_ROOT_USERNAME}", "-p", "$${MONGO_INITDB_ROOT_PASSWORD}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping').ok"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 20s
+    logging: *logging
+    security_opt: ["no-new-privileges:true"]
+
+  backend:
+    build:
+      context: .
+      args:
+        INSTALL_BROWSER: ${INSTALL_BROWSER:-false}
+    image: ai-jobpilot:latest
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      mongo:
+        condition: service_healthy
+    expose: ["8000"]           # NOT published to the host: only the web service talks to it
+    volumes:
+      - jobpilot_storage:/app/storage
+      - jobpilot_logs:/app/logs
+      - ./config:/app/config   # editable configuration: policies, limits, preferences, scoring (backups are written to ./config/backups)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging: *logging
+    <<: *hardening
+
+  web:
+    build:
+      context: ./web
+    image: ai-jobpilot-web:latest
+    restart: unless-stopped
+    environment:
+      BACKEND_BASE_URL: http://backend:8000
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env (24+ random characters)}   # stays on this server: the browser never receives it
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: "8501"
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8501:8501"  # reachable from this computer only; put a reverse proxy with authentication in front before exposing it
+    read_only: true            # it only serves files and forwards requests; nothing is written
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8501/web/config').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging: *logging
+    <<: *hardening
+
+volumes:
+  mongo_data:
+  jobpilot_storage:
+  jobpilot_logs:

@@ -1,0 +1,44 @@
+# Nothing secret, local or bulky ever goes into the build context (and therefore never into an image layer).
+.git
+.gitignore
+.github
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# secrets and local configuration
+.env
+.env.*
+!.env.example
+*.cred
+*.session
+
+# runtime data lives in volumes, not in the image
+storage/*
+!storage/**/.gitkeep
+logs/*
+!logs/.gitkeep
+backups
+config/backups
+
+# the web app has its own build context (web/Dockerfile)
+web
+frontend
+
+# tests, docs and tooling that the running app does not need
+tests
+docs
+.claude
+CLAUDE.md
+MASTER_PROMPT.md
+requirements*.txt
+docker-compose*.yml
+Dockerfile
+*.md
+!README.md

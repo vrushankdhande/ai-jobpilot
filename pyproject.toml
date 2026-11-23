@@ -1,0 +1,48 @@
+[project]
+name = "ai-jobpilot"
+version = "0.1.0"
+description = "AI-powered job discovery, matching and application assistant"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "anthropic>=2.8.0",
+    "apscheduler>=3.11.3",
+    "cryptography>=50.0.2",
+    "fastapi>=0.162.5",
+    "httpx>=0.28.1",
+    "playwright>=1.65.1",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.2",
+    "pymongo>=4.19.0",
+    "pymupdf>=1.28.2",
+    "python-docx>=1.2.0",
+    "python-multipart>=0.0.33",
+    "pyyaml>=6.0.3",
+    "redis>=8.1.0",
+    "reportlab>=5.1.0",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+ai-jobpilot = "ai_jobpilot:main"
+
+[dependency-groups]
+dev = [
+    "psutil>=7.2.2",
+    "pytest>=8.3.0",
+    "pytest-cov>=7.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "integration: needs a real MongoDB instance (skipped when unreachable)",
+    "safety: static/behavioural safety invariants",
+    "e2e: starts a real API + the React web server and drives them with Playwright (slow; skipped when no browser can start)",
+    "browser: drives a real Chromium-family browser via Playwright against LOCAL test forms (skipped when none can start)",
+]

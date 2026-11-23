@@ -1,0 +1,198 @@
+# Skill dictionary for JD parsing and matching. Add a skill here - no code change needed.
+# category is one of: programming_languages, frameworks, libraries, databases, cloud_platforms, tools, domain_knowledge
+# ambiguous: true  -> only recognised as a whole list item (e.g. "Skills: R, Go"), never inside prose.
+skills:
+  # ---- programming languages
+  - {name: Python, category: programming_languages, aliases: [python3]}
+  - {name: SQL, category: programming_languages, aliases: [structured query language]}
+  - {name: Java, category: programming_languages}
+  - {name: JavaScript, category: programming_languages, aliases: [js, ecmascript, java script]}
+  - {name: TypeScript, category: programming_languages, aliases: [ts]}
+  - {name: C++, category: programming_languages, aliases: [cpp]}
+  - {name: C#, category: programming_languages, aliases: [csharp, c sharp]}
+  - {name: C, category: programming_languages, ambiguous: true}
+  - {name: R, category: programming_languages, ambiguous: true}
+  - {name: Go, category: programming_languages, aliases: [golang], ambiguous: true}
+  - {name: Rust, category: programming_languages}
+  - {name: Scala, category: programming_languages}
+  - {name: Kotlin, category: programming_languages}
+  - {name: Bash, category: programming_languages, aliases: [shell scripting]}
+  - {name: MATLAB, category: programming_languages}
+  - {name: PHP, category: programming_languages}
+  - {name: Ruby, category: programming_languages}
+  - {name: Swift, category: programming_languages, ambiguous: true}
+  - {name: HTML, category: programming_languages}
+  - {name: CSS, category: programming_languages}
+  # ---- frameworks
+  - {name: PyTorch, category: frameworks, aliases: [py torch, torch]}
+  - {name: TensorFlow, category: frameworks, aliases: [tensor flow]}
+  - {name: Keras, category: frameworks}
+  - {name: CNN, category: domain_knowledge, aliases: [cnns, convolutional neural network, convolutional neural networks]}
+  - {name: RNN, category: domain_knowledge, aliases: [rnns, recurrent neural network, recurrent neural networks]}
+  - {name: LSTM, category: domain_knowledge, aliases: [lstms, long short-term memory]}
+  - {name: Transformers, category: domain_knowledge, aliases: [transformer models, transformer architecture]}
+  - {name: Transfer Learning, category: domain_knowledge}
+  - {name: YOLO, category: domain_knowledge, aliases: [yolov3, yolov5, yolov8, "yolov3–v5"]}
+  - {name: FastAPI, category: frameworks, aliases: [fast api]}
+  - {name: Flask, category: frameworks}
+  - {name: Django, category: frameworks}
+  - {name: Spring Boot, category: frameworks, aliases: [springboot]}
+  - {name: Node.js, category: frameworks, aliases: [nodejs, node js]}
+  - {name: React, category: frameworks, aliases: [reactjs, react.js]}
+  - {name: Angular, category: frameworks, aliases: [angularjs]}
+  - {name: Vue, category: frameworks, aliases: [vue.js, vuejs]}
+  - {name: Streamlit, category: frameworks}
+  - {name: LangChain, category: frameworks, aliases: [lang chain]}
+  - {name: LlamaIndex, category: frameworks, aliases: [llama index]}
+  - {name: LangGraph, category: frameworks}
+  - {name: Hugging Face, category: frameworks, aliases: [huggingface, hugging face transformers]}
+  - {name: .NET, category: frameworks, aliases: [dotnet, .net core]}
+  # ---- libraries
+  - {name: Scikit-learn, category: libraries, aliases: [sklearn, scikit learn, sci-kit learn]}
+  - {name: Pandas, category: libraries}
+  - {name: NumPy, category: libraries}
+  - {name: SciPy, category: libraries}
+  - {name: Matplotlib, category: libraries}
+  - {name: Seaborn, category: libraries}
+  - {name: Plotly, category: libraries}
+  - {name: OpenCV, category: libraries, aliases: [cv2]}
+  - {name: spaCy, category: libraries}
+  - {name: NLTK, category: libraries}
+  - {name: XGBoost, category: libraries}
+  - {name: LightGBM, category: libraries}
+  - {name: CatBoost, category: libraries}
+  - {name: Pydantic, category: libraries}
+  - {name: SQLAlchemy, category: libraries}
+  - {name: PySpark, category: libraries}
+  - {name: Beautiful Soup, category: libraries, aliases: [beautifulsoup, bs4]}
+  - {name: Pytest, category: libraries}
+  # ---- databases
+  - {name: MongoDB, category: databases, aliases: [mongo, mongo db]}
+  - {name: PostgreSQL, category: databases, aliases: [postgres, postgre sql]}
+  - {name: MySQL, category: databases, aliases: [my sql]}
+  - {name: SQLite, category: databases}
+  - {name: SQL Server, category: databases, aliases: [mssql, ms sql]}
+  - {name: Oracle, category: databases, aliases: [oracle db]}
+  - {name: Redis, category: databases}
+  - {name: Elasticsearch, category: databases, aliases: [elastic search]}
+  - {name: Cassandra, category: databases}
+  - {name: DynamoDB, category: databases}
+  - {name: Snowflake, category: databases}
+  - {name: BigQuery, category: databases}
+  - {name: Neo4j, category: databases}
+  - {name: Vector Database, category: databases, aliases: [vector db, vector dbs, vectordb, vector databases, vector store, vector stores]}
+  - {name: Pinecone, category: databases}
+  - {name: FAISS, category: databases}
+  - {name: ChromaDB, category: databases, aliases: [chroma]}
+  - {name: Qdrant, category: databases}
+  - {name: Weaviate, category: databases}
+  - {name: Milvus, category: databases}
+  # ---- cloud platforms
+  - {name: AWS, category: cloud_platforms, aliases: [amazon web services]}
+  - {name: Azure, category: cloud_platforms, aliases: [microsoft azure]}
+  - {name: GCP, category: cloud_platforms, aliases: [google cloud, google cloud platform]}
+  - {name: Databricks, category: cloud_platforms}
+  - {name: SageMaker, category: cloud_platforms, aliases: [aws sagemaker, amazon sagemaker]}
+  - {name: Azure ML, category: cloud_platforms, aliases: [azure machine learning]}
+  - {name: Vertex AI, category: cloud_platforms}
+  # ---- tools
+  - {name: Docker, category: tools}
+  - {name: Kubernetes, category: tools, aliases: [k8s]}
+  - {name: Git, category: tools}
+  - {name: GitHub, category: tools}
+  - {name: GitLab, category: tools}
+  - {name: Jenkins, category: tools}
+  - {name: CI/CD, category: tools, aliases: [cicd, ci cd, continuous integration]}
+  - {name: Terraform, category: tools}
+  - {name: Airflow, category: tools, aliases: [apache airflow]}
+  - {name: MLflow, category: tools}
+  - {name: Kafka, category: tools, aliases: [apache kafka]}
+  - {name: Spark, category: tools, aliases: [apache spark]}
+  - {name: Hadoop, category: tools}
+  - {name: Linux, category: tools}
+  - {name: Jira, category: tools}
+  - {name: Tableau, category: tools}
+  - {name: Power BI, category: tools, aliases: [powerbi]}
+  - {name: Excel, category: tools, aliases: [microsoft excel, ms excel], ambiguous: true}
+  - {name: Postman, category: tools}
+  - {name: DVC, category: tools}
+  - {name: Grafana, category: tools}
+  - {name: dbt, category: tools}
+  # ---- domain knowledge
+  - {name: Machine Learning, category: domain_knowledge, aliases: [ml]}
+  - {name: Deep Learning, category: domain_knowledge, aliases: [dl]}
+  - {name: Natural Language Processing, category: domain_knowledge, aliases: [nlp]}
+  - {name: Computer Vision, category: domain_knowledge}
+  - {name: Generative AI, category: domain_knowledge, aliases: [gen ai, genai, generative artificial intelligence]}
+  - {name: Large Language Models, category: domain_knowledge, aliases: [llm, llms, large language model]}
+  - {name: Retrieval-Augmented Generation, category: domain_knowledge, aliases: [rag, rag pipeline, rag pipelines, retrieval augmented generation]}
+  - {name: Prompt Engineering, category: domain_knowledge}
+  - {name: Fine-tuning, category: domain_knowledge, aliases: [finetuning, fine tuning]}
+  - {name: Embeddings, category: domain_knowledge}
+  - {name: Reinforcement Learning, category: domain_knowledge}
+  - {name: Time Series, category: domain_knowledge, aliases: [time series forecasting, time-series]}
+  - {name: Statistics, category: domain_knowledge, aliases: [statistical modeling, statistical modelling, statistical analysis]}
+  - {name: A/B Testing, category: domain_knowledge, aliases: [ab testing, a b testing]}
+  - {name: MLOps, category: domain_knowledge, aliases: [ml ops]}
+  - {name: ETL, category: domain_knowledge, aliases: [etl pipelines, data pipelines]}
+  - {name: Data Analysis, category: domain_knowledge, aliases: [data analytics]}
+  - {name: Data Visualization, category: domain_knowledge, aliases: [data visualisation]}
+  - {name: Feature Engineering, category: domain_knowledge}
+  - {name: Recommendation Systems, category: domain_knowledge, aliases: [recommender systems, recommendation engines]}
+  - {name: REST APIs, category: domain_knowledge, aliases: [rest api, restful api, restful apis]}
+  - {name: Microservices, category: domain_knowledge, aliases: [microservice]}
+  - {name: Data Structures and Algorithms, category: domain_knowledge, aliases: [dsa, data structures]}
+
+# Documented relationships. Related skills earn PARTIAL credit only - never full credit.
+# Python and Java, or TensorFlow and PyTorch, are deliberately NOT equivalent.
+related_groups:   # symmetric
+  - {members: [TensorFlow, PyTorch], credit: 0.5, reason: "Related deep learning frameworks, but not equivalent"}
+  - {members: [Keras, TensorFlow], credit: 0.8, reason: "Keras is TensorFlow's high-level API"}
+  - {members: [Keras, PyTorch], credit: 0.4, reason: "Related deep learning frameworks, but not equivalent"}
+  - {members: [AWS, Azure, GCP], credit: 0.4, reason: "Major cloud platforms; services and tooling differ"}
+  - {members: [PostgreSQL, MySQL, SQL Server, Oracle, SQLite], credit: 0.6, reason: "Relational SQL databases with different dialects and tooling"}
+  - {members: [MongoDB, DynamoDB, Cassandra], credit: 0.35, reason: "NoSQL stores with different data models"}
+  - {members: [Pinecone, FAISS, ChromaDB, Qdrant, Weaviate, Milvus, Vector Database], credit: 0.6, reason: "Vector search stores; APIs and operations differ"}
+  - {members: [LangChain, LlamaIndex, LangGraph], credit: 0.6, reason: "LLM orchestration frameworks, not interchangeable APIs"}
+  - {members: [Flask, FastAPI, Django], credit: 0.6, reason: "Python web frameworks with different designs"}
+  - {members: [React, Angular, Vue], credit: 0.5, reason: "Frontend frameworks with different models"}
+  - {members: [Tableau, Power BI], credit: 0.7, reason: "BI/visualisation tools with similar concepts"}
+  - {members: [XGBoost, LightGBM, CatBoost], credit: 0.8, reason: "Gradient-boosting libraries"}
+  - {members: [Docker, Kubernetes], credit: 0.3, reason: "Container runtime vs orchestration - related, not the same skill"}
+  - {members: [Git, GitHub, GitLab], credit: 0.6, reason: "Git hosting platforms around the same version control"}
+  - {members: [Airflow, Kafka], credit: 0.0, reason: "Not related"}
+related_directed:  # having `from` earns partial credit for requirement `to`
+  - {from: Scikit-learn, to: Machine Learning, credit: 0.7, reason: "Scikit-learn is an ML library, but 'Machine Learning' is not listed explicitly"}
+  - {from: XGBoost, to: Machine Learning, credit: 0.7, reason: "XGBoost is an ML library, but 'Machine Learning' is not listed explicitly"}
+  - {from: PyTorch, to: Deep Learning, credit: 0.7, reason: "PyTorch is a deep learning framework; 'Deep Learning' is not listed explicitly"}
+  - {from: TensorFlow, to: Deep Learning, credit: 0.7, reason: "TensorFlow is a deep learning framework; 'Deep Learning' is not listed explicitly"}
+  - {from: CNN, to: Deep Learning, credit: 0.9, reason: "CNNs are deep neural networks"}
+  - {from: RNN, to: Deep Learning, credit: 0.9, reason: "RNNs are deep neural networks"}
+  - {from: LSTM, to: Deep Learning, credit: 0.9, reason: "LSTMs are deep neural networks"}
+  - {from: Transformers, to: Deep Learning, credit: 0.8, reason: "Transformers are deep neural networks"}
+  - {from: Keras, to: Deep Learning, credit: 0.8, reason: "Keras is a deep learning API"}
+  - {from: Transfer Learning, to: Deep Learning, credit: 0.8, reason: "Transfer learning is applied to deep networks"}
+  - {from: Transformers, to: Natural Language Processing, credit: 0.7, reason: "Transformers are the core NLP architecture"}
+  - {from: Large Language Models, to: Natural Language Processing, credit: 0.8, reason: "LLMs are language models (NLP)"}
+  - {from: CNN, to: Computer Vision, credit: 0.7, reason: "CNNs are the core computer-vision architecture"}
+  - {from: YOLO, to: Computer Vision, credit: 0.9, reason: "YOLO is an object-detection (computer-vision) model"}
+  - {from: Deep Learning, to: Machine Learning, credit: 0.7, reason: "Deep learning is a subfield of machine learning"}
+  - {from: PyTorch, to: Machine Learning, credit: 0.5, reason: "Deep learning framework implies ML work, not listed explicitly"}
+  - {from: TensorFlow, to: Machine Learning, credit: 0.5, reason: "Deep learning framework implies ML work, not listed explicitly"}
+  - {from: Large Language Models, to: Generative AI, credit: 0.8, reason: "LLMs are a core part of generative AI"}
+  - {from: Retrieval-Augmented Generation, to: Generative AI, credit: 0.7, reason: "RAG is a generative AI technique"}
+  - {from: Retrieval-Augmented Generation, to: Large Language Models, credit: 0.6, reason: "RAG systems use LLMs"}
+  - {from: LangChain, to: Large Language Models, credit: 0.5, reason: "LangChain builds on LLMs, but LLM skill is not listed explicitly"}
+  - {from: Fine-tuning, to: Large Language Models, credit: 0.5, reason: "Fine-tuning is usually applied to language models"}
+  - {from: Hugging Face, to: Natural Language Processing, credit: 0.6, reason: "Hugging Face is mostly used for NLP"}
+  - {from: spaCy, to: Natural Language Processing, credit: 0.7, reason: "spaCy is an NLP library"}
+  - {from: NLTK, to: Natural Language Processing, credit: 0.7, reason: "NLTK is an NLP library"}
+  - {from: OpenCV, to: Computer Vision, credit: 0.7, reason: "OpenCV is a computer-vision library"}
+  - {from: PostgreSQL, to: SQL, credit: 0.8, reason: "SQL database experience implies SQL, which is not listed explicitly"}
+  - {from: MySQL, to: SQL, credit: 0.8, reason: "SQL database experience implies SQL, which is not listed explicitly"}
+  - {from: SQL Server, to: SQL, credit: 0.8, reason: "SQL database experience implies SQL, which is not listed explicitly"}
+  - {from: Pandas, to: Data Analysis, credit: 0.6, reason: "Pandas is a data-analysis library"}
+  - {from: SageMaker, to: AWS, credit: 0.7, reason: "SageMaker is an AWS service"}
+  - {from: Azure ML, to: Azure, credit: 0.7, reason: "Azure ML is an Azure service"}
+  - {from: Vertex AI, to: GCP, credit: 0.7, reason: "Vertex AI is a GCP service"}
+  - {from: Docker, to: CI/CD, credit: 0.2, reason: "Container tooling is often used in CI/CD, but is not the same skill"}

@@ -1,0 +1,106 @@
+# AI JobPilot - matching score configuration.
+# Changing anything here changes the config hash, so old matches are NOT reused:
+# re-run them to score with the new settings. Bump scoring_version when you change the method.
+scoring_version: "1.1"   # 1.1: JD reading fixes (section bleed, own-product skills, post-hire certifications) + near-equivalent skills satisfy mandatory skills
+
+# Category weights (must total 100).
+weights:
+  technical_skills: 30
+  experience: 20
+  projects: 15
+  responsibilities: 15
+  education: 5
+  location: 5
+  seniority: 10
+
+# Classification lower bounds (inclusive).
+thresholds:
+  excellent: 90     # 90-100  Excellent Match
+  strong: 80        # 80-89   Strong Match
+  good: 75          # 75-79   Good Match
+  moderate: 60      # 60-74   Moderate Match, below = Low Match
+
+# Minimum score for a "Recommended" verdict (also requires eligibility PASS and enough data).
+recommendation_threshold: 75
+# Below this data coverage (% of weight that could be evaluated) a match is "Insufficient data".
+min_data_coverage: 60
+
+# normalize: score = earned / evaluated weight * 100, reported together with data coverage.
+# zero:      unknown categories earn 0 points.
+missing_data_policy: normalize
+
+skills:
+  mandatory_share: 0.8      # share of the technical-skills category driven by mandatory skills
+  preferred_share: 0.2      # (if one side is empty, the other gets 100%; noted in the report)
+
+experience:
+  years_fit_share: 0.5      # general years-of-experience fit
+  relevance_share: 0.5      # demonstrated use of the JD's skills in verified work history
+
+projects:
+  top_n: 3                  # score = mean relevance of the best N projects
+  outcome_bonus: 0.1        # added to a project's relevance if it states outcomes/achievements
+  skills_for_full_credit: 5 # a project covering this many JD skills is fully relevant
+
+responsibilities:
+  full_credit_overlap: 0.5  # share of a JD responsibility's content covered by one candidate statement = full credit
+  no_credit_overlap: 0.15   # below this overlap = no credit
+
+education:
+  one_level_below_credit: 0.4
+  two_levels_below_credit: 0.0
+  preferred_unmet_credit: 0.75   # optional qualifications are barely penalised
+  none_required_credit: 1.0      # JD asks for nothing -> nothing to penalise
+
+location:
+  city_mismatch_open_to_relocation: 0.6
+  city_mismatch_not_open: 0.0
+
+seniority:
+  # years of verified experience at which each level starts
+  bands: {entry: 0, junior: 1, mid: 3, senior: 5, lead: 8, principal: 12}
+  credit_by_difference:        # candidate level minus job level
+    "0": 1.0
+    "1": 0.9
+    "2": 0.7
+    "-1": 0.5
+    "-2": 0.2
+
+eligibility:
+  # Which UNKNOWN checks stop an application from proceeding automatically.
+  blocking_unknown_checks: [min_experience, mandatory_skills, education, certifications, work_authorization]
+  experience_tolerance_years: 0.0
+  # Mandatory skills: FAIL if the missing share of mandatory skill requirements is above this (0 = any miss fails).
+  mandatory_skills_fail_if_missing_fraction_above: 0.0
+  # A mandatory skill is met by an exact match OR a documented near-equivalent whose credit in config/skills.yaml is at least this.
+  mandatory_skill_equivalent_credit: 0.7
+  allow_unknown_to_proceed: false
+  # Candidate salary expectation vs the JD range is a preference, not a hard requirement, unless true:
+  salary_is_hard: false
+
+# Role fit: a factor on the final score from the match between the job's FUNCTION and the candidate's (read from job titles only).
+# Without it a sales/finance posting that mentions "machine learning" once scores well for an ML engineer (see docs/scoring_methodology.md).
+# It never rejects: eligibility stays a separate, hard-requirement check. Unknown function (either side) = no change.
+role_fit:
+  enabled: true
+  same_factor: 1.0
+  adjacent_factor: 0.8
+  different_factor: 0.4
+  # First matching family wins, so the order matters ("Sales Engineer" is sales). A strong technical noun (engineer, scientist, architect ...)
+  # makes a title technical unless it is sales ("Data Scientist, Marketing" is technical).
+  families:
+    sales: [sales, account executive, account manager, business development, revenue, go-to-market, gtm, partner manager, channel manager, sdr, bdr, hunter]
+    marketing: [analyst relations, marketing, brand, demand generation, communications, public relations, events, community manager, copywriter, social media]
+    finance_legal: [finance, financial, accounting, accountant, accounts receivable, accounts payable, tax, treasury, audit, legal, counsel, attorney, paralegal,
+                    compliance, procurement, payroll, real estate, facilities, facility, order to revenue, travel & expense, controller, fp&a, billing]
+    people: [recruiter, recruiting, recruitment, talent, people partner, people operations, human resources, hr, employee experience]
+    technical: [engineer, engineering, developer, scientist, architect, researcher, programmer, machine learning, deep learning, data science, software,
+                sre, devops, forward deployed, full stack, backend, frontend, analyst, analytics, business intelligence]   # data/BI analysts count as technical
+    product: [product manager, product management, product owner, product design, designer, ux]
+    customer: [customer success, technical account manager, solutions consultant, support, enablement, implementation, professional services, delivery, deployment]
+    operations: [operations, program manager, strategy, chief of staff]
+  adjacent_groups:
+    - [technical, product, customer]
+    - [sales, marketing, customer]
+    - [marketing, product]
+    - [operations, product, customer, technical]

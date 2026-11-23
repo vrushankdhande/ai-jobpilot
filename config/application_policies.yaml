@@ -1,0 +1,95 @@
+# Application-automation policy (Phase 6). FAIL CLOSED: anything not listed here is MANUAL HANDOFF only.
+#
+# application_status:
+#   AUTOMATION_ALLOWED      the engine may fill and (after explicit candidate approval) submit. Only the local test provider.
+#   AUTHORIZATION_REQUIRED  automation only for sites YOU list under `authorized_sites` in this file, after you have checked
+#                           that the employer / ATS permits automated applications. Empty list = nothing is automated.
+#   MANUAL_HANDOFF          the engine prepares everything; you apply yourself in your own browser. No automation, ever.
+#   DISABLED                nothing at all.
+#
+# Even where automation is allowed the code never solves/bypasses CAPTCHAs, never logs in for you, never evades rate limits
+# or bot detection, and never submits without your explicit approval. A CAPTCHA, login wall or unknown field stops the run
+# and switches the application to manual handoff. APPLICATION_AUTOMATION_ENABLED=true is also required (default false).
+#
+# REVIEW BASIS: desk research on 2026-11-12 (web search; legal texts NOT read in full). Findings:
+#   * Greenhouse: job boards use Google reCAPTCHA against bots/spam; Greenhouse's published "Real Talent" material treats
+#     bulk automated applications as a spam problem. No clause permitting automated applications was found.
+#   * Lever: the documented submit method is a POST API that needs an API key configured by Lever for the EMPLOYER; no
+#     permission for automated use of the hosted application form was found.
+#   * Workday: career sites commonly require an employer-specific candidate account / sign-in; automating sign-in is out of scope.
+#   * LinkedIn / Indeed / Naukri: terms reported to prohibit bots/automation of applications (Indeed's terms say so explicitly).
+# => nothing on a real third-party platform is permitted by default. Confirm yourself before authorising a site.
+
+linkedin:
+  application_status: MANUAL_HANDOFF
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: true
+  basis: "Automated applications are reported to violate the LinkedIn User Agreement. Manual handoff only."
+
+indeed:
+  application_status: MANUAL_HANDOFF
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: true
+  basis: "Indeed's terms prohibit automating the Indeed Apply process outside its official vendors. Manual handoff only."
+
+naukri:
+  application_status: MANUAL_HANDOFF
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: true
+  basis: "Automated access is listed as prohibited conduct; no official apply API found. Manual handoff only."
+
+instahyre:
+  application_status: MANUAL_HANDOFF
+  reviewed_on: "2026-11-21"
+  needs_human_confirmation: true
+  basis: "Terms not reviewed and no official apply API found. Manual handoff only."
+
+manual:
+  application_status: MANUAL_HANDOFF
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: false
+  basis: "A job you entered yourself; the application is completed by you."
+
+career_pages:
+  providers:
+    greenhouse:
+      application_status: AUTHORIZATION_REQUIRED
+      application_hosts: [boards.greenhouse.io, job-boards.greenhouse.io, boards.eu.greenhouse.io]
+      reviewed_on: "2026-11-12"
+      needs_human_confirmation: true
+      basis: "Public boards use reCAPTCHA; no permission for automated submissions found. Automate only sites you authorise below."
+    lever:
+      application_status: AUTHORIZATION_REQUIRED
+      application_hosts: [jobs.lever.co, jobs.eu.lever.co]
+      reviewed_on: "2026-11-12"
+      needs_human_confirmation: true
+      basis: "Hosted form; the documented submit API needs an employer-issued key. Automate only sites you authorise below."
+    workday:
+      application_status: MANUAL_HANDOFF
+      application_hosts: []
+      reviewed_on: "2026-11-12"
+      needs_human_confirmation: true
+      basis: "Requires a candidate account / sign-in per employer; automated login is not supported. Manual handoff only."
+    generic_page:
+      application_status: AUTHORIZATION_REQUIRED
+      application_hosts: []        # hosts come only from authorized_sites
+      reviewed_on: "2026-11-12"
+      needs_human_confirmation: true
+      basis: "An arbitrary employer form: automate only a site you have checked and listed below."
+
+# Controlled local test forms (http://127.0.0.1 only; only when ALLOW_LOCAL_TEST_FORMS=true). Never a real site.
+local_test:
+  application_status: AUTOMATION_ALLOWED
+  application_hosts: [127.0.0.1, localhost]
+  reviewed_on: "2026-11-12"
+  needs_human_confirmation: false
+  basis: "Local HTML forms served by the test-suite. No third party is contacted."
+
+# Sites YOU have checked and authorise for automated filling/submission (still needs your approval per application).
+# Example (commented out):
+#   - host: boards.greenhouse.io
+#     path_prefix: /yourcompany          # optional
+#     provider: greenhouse
+#     authorized_on: "2026-11-12"
+#     basis: "Employer's careers page says automated/assisted applications are fine"
+authorized_sites: []

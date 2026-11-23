@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+streamlit
+anthropic
+pymongo
+redis
+playwright
+pydantic
+pydantic-settings
+pymupdf
+python-docx
+apscheduler
+pandas
+python-multipart
+ 
