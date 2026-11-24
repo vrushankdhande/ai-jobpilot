@@ -499,3 +499,36 @@ def test_record_applied_on_an_existing_handoff_and_on_an_ineligible_job(env, rea
     env.db["jobs"].update_one({"job_id": jid2}, {"$set": {"source": "career_pages"}})
     assert env.service.record_applied_yourself(jid2)["state"] == "SUBMITTED"         # an eligibility FAIL does not stop recording what you already did
     assert env.server.posts == []
+
+
+def test_your_own_applied_record_can_be_undone_and_recorded_again_with_the_history_kept(env):
+    jid, _, _ = env.matching.analyze_jd(JobInput(job_description=JD["text"], job_title="Role undo", company_name="Acme", location="Pune", job_url="https://boards.greenhouse.io/acme/jobs/78"))
+    env.db["jobs"].update_one({"job_id": jid}, {"$set": {"source": "career_pages"}})
+    a = env.service.record_applied_yourself(jid)
+    undone = env.service.undo_recorded_applied(jid)                                  # a mistaken click on the Applied switch
+    assert undone["application_id"] == a["application_id"] and undone["state"] == "MANUAL_HANDOFF_REQUIRED"
+    assert undone["submitted_at"] is None and undone["submission"]["outcome"] == "not_attempted"
+    assert env.service.applied_states([jid]) == {jid: "MANUAL_HANDOFF_REQUIRED"}
+    again = env.service.record_applied_yourself(jid)                                 # switching it on again works and reuses the same application
+    assert again["application_id"] == a["application_id"] and again["state"] == "SUBMITTED" and env.apps.count(job_id=jid) == 1
+    events = [e["type"] for e in env.apps.list_events(a["application_id"])]
+    assert events.count("submitted_recorded_by_candidate") == 2 and "applied_record_undone" in events      # append-only history
+    assert env.server.posts == []
+
+
+def test_undo_is_refused_for_verified_or_jobpilot_submitted_applications(env):
+    from backend.services.application_service import ActionNotAllowed, ApplicationNotFound
+    jid, _, _ = env.matching.analyze_jd(JobInput(job_description=JD["text"], job_title="Role verified", company_name="Acme", location="Pune", job_url="https://boards.greenhouse.io/acme/jobs/79"))
+    env.db["jobs"].update_one({"job_id": jid}, {"$set": {"source": "career_pages"}})
+    env.service.record_applied_yourself(jid, notes="Reference ABC-123 from the confirmation e-mail")      # a note makes it VERIFIED
+    with pytest.raises(ActionNotAllowed, match="verified"):
+        env.service.undo_recorded_applied(jid)
+    jid2, _, _ = env.matching.analyze_jd(JobInput(job_description=JD["text"], job_title="Role auto", company_name="Acme", location="Pune", job_url="https://boards.greenhouse.io/acme/jobs/80"))
+    env.db["jobs"].update_one({"job_id": jid2}, {"$set": {"source": "career_pages"}})
+    a = env.service.record_applied_yourself(jid2)
+    env.db["applications"].update_one({"application_id": a["application_id"]}, {"$set": {"attempts": 1, "submission.outcome": "confirmed", "submission.verified_by": "page"}})
+    with pytest.raises(ActionNotAllowed, match="submitted by JobPilot"):                                 # never un-submit what JobPilot sent
+        env.service.undo_recorded_applied(jid2)
+    assert env.service.applied_states([jid2]) == {jid2: "SUBMITTED"}
+    with pytest.raises(ApplicationNotFound):
+        env.service.undo_recorded_applied("0" * 32)

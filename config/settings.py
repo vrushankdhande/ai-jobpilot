@@ -123,11 +123,19 @@ class Settings(BaseSettings):
     notifications_enabled: bool = False
     notification_recipient: str = ""
     notification_credentials_file: str = "storage/notifications/gmail.cred"   # Fernet-encrypted with SECRET_KEY; never plain text
+    # Job-alert e-mails (Naukri alerts in YOUR Gmail, read with the read-only Gmail API). Separate, Fernet-encrypted credentials.
+    job_alert_credentials_file: str = "storage/notifications/gmail_job_alerts.cred"
+    job_alert_lookback_days: int = Field(default=3, ge=1, le=30)
     gmail_sender: str = "me"
 
     @property
     def notification_credentials_path(self) -> Path:
         path = Path(self.notification_credentials_file)
+        return path if path.is_absolute() else PROJECT_ROOT / path
+
+    @property
+    def job_alert_credentials_path(self) -> Path:
+        path = Path(self.job_alert_credentials_file)
         return path if path.is_absolute() else PROJECT_ROOT / path
 
     def config_path(self, name: str) -> Path:

@@ -177,7 +177,7 @@ describe("JobMatching", () => {
     expect(screen.getByLabelText("Eligibility")).toHaveValue("Any");
   });
 
-  it("the Applied switch records that YOU applied (after a confirmation), then shows Applied and cannot be turned off; the filter is sent", async () => {
+  it("the Applied switch records that YOU applied (after a confirmation), then shows Applied (and can be switched off to undo); the filter is sent", async () => {
     let applied = false;
     const row = { match_id: "m1", job_id: "a".repeat(32), created_at: "2026-11-05T08:00:00", job_title: "ML Engineer", company_name: "Acme", match_score: 74, classification: "Good Match",
       eligibility_status: "PASS", recommendation_code: "BELOW_THRESHOLD", data_coverage: 90, profile_version: 3, scoring_version: "1.1", min_experience_required: 3, role_fit: "same" };
@@ -195,7 +195,7 @@ describe("JobMatching", () => {
     expect(fn.mock.calls.some(([u]) => u === "/api/applications/record-applied")).toBe(false);
     await user.click(sw);
     await waitFor(() => expect(screen.getByRole("switch", { name: "Applied: ML Engineer at Acme" })).toBeChecked());
-    expect(screen.getByRole("switch", { name: "Applied: ML Engineer at Acme" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Applied: ML Engineer at Acme" })).toBeEnabled();                     // it can be switched off again to undo a mistake (see AppliedSwitch.test.tsx)
     const call = fn.mock.calls.find(([u]) => u === "/api/applications/record-applied")!;
     expect(JSON.parse(String((call[1] as RequestInit).body))).toEqual({ job_id: "a".repeat(32) });
     expect(confirm.mock.calls[1][0]).toMatch(/does not apply for you/);

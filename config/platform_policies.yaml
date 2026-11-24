@@ -71,6 +71,21 @@ manual:
   needs_human_confirmation: false
   basis: "Jobs the user found themselves and entered by hand. The URL is stored but never requested."
 
+email_alerts:
+  auto_apply: false
+  discovery_status: ENABLED          # inert until you authorise read-only Gmail access (scripts/gmail_alerts_setup.py)
+  manual_import: false
+  allowed_hosts: [gmail.googleapis.com]
+  requests_per_minute: 60
+  max_requests_per_run: 41
+  max_jobs_per_run: 300
+  reviewed_on: "2026-11-24"
+  needs_human_confirmation: false
+  basis: >-
+    Job-alert e-mails in the candidate's OWN mailbox, read with the official Gmail API (gmail.readonly scope, the candidate's own
+    OAuth consent). Only messages from allow-listed alert senders (naukri.com) are opened. No job site is contacted, links in the
+    e-mails are stored but never opened, and e-mail bodies are not stored. This is not scraping: the jobs were sent to the candidate.
+
 career_pages:
   auto_apply: true
   discovery_status: ENABLED          # only for companies you list in config/career_sources.yaml

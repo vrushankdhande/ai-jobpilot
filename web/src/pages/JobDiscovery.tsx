@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { AppliedSwitch, useApplicationStates } from "../components/AppliedSwitch";
 import { PageHeader } from "../components/Layout";
-import { LinkedInJobsTable, LinkedInQuickImport, LinkedInSearch, type LinkedInSuggestions } from "../components/LinkedInTools";
+import { LinkedInBulkPaste, LinkedInJobsTable, LinkedInQuickImport, LinkedInSearch, type LinkedInSuggestions } from "../components/LinkedInTools";
 import { NaukriBulkPaste, NaukriQuickImport, NaukriSearch } from "../components/NaukriTools";
 import { Alert, Check, DataTable, Empty, ErrorBox, Field, Loading, MetricRow, Paginator, Progress } from "../components/ui";
 import { fmtDt } from "../format";
@@ -35,6 +35,7 @@ export default function JobDiscovery() {
       <LastRun run={lastRun ?? (status.result?.ok ? status.data : null)} />
       <h2>LinkedIn (manual)</h2>
       <LinkedInSearch suggestions={liSuggest.data} />
+      <LinkedInBulkPaste onDone={() => { runs.reload(); setLiKey((k) => k + 1); }} />
       <LinkedInQuickImport onDone={() => { runs.reload(); setLiKey((k) => k + 1); }} />
       <LinkedInJobsTable reloadKey={liKey} />
       <h2>Naukri (manual)</h2>

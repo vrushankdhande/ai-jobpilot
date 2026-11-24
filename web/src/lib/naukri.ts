@@ -108,3 +108,32 @@ export function parseNaukriResults(text: string, today: Date = new Date()): Past
   });
   return out;
 }
+
+export interface NaukriLink { url: string; text: string }
+
+/** Job links from the HTML copy the browser puts on the clipboard next to the text (each job title links to /job-listings-…-<id>). Nothing is fetched. */
+export function naukriLinksFromHtml(html: string): NaukriLink[] {
+  if (!html.trim()) return [];
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const out: NaukriLink[] = [];
+  doc.querySelectorAll("a[href]").forEach((a) => {
+    const href = a.getAttribute("href") ?? "";
+    const ref = parseNaukriJobUrl(/^https?:/i.test(href) ? href : `https://www.naukri.com${href.startsWith("/") ? "" : "/"}${href}`);
+    if (ref && !out.some((l) => l.url === ref.canonicalUrl)) out.push({ url: ref.canonicalUrl, text: (a.textContent ?? "").replace(/\s+/g, " ").trim() });
+  });
+  return out;
+}
+
+const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/** The link for each pasted job: the link whose text is the job title (in page order, so two jobs with the same title get their own links), else by order when the counts agree. */
+export function naukriLinksFor(jobs: Array<{ title: string }>, links: NaukriLink[]): string[] {
+  const used = new Set<number>();
+  const out = jobs.map((j) => {
+    const k = links.findIndex((l, i) => !used.has(i) && l.text && key(l.text) === key(j.title));
+    if (k < 0) return "";
+    used.add(k);
+    return links[k].url;
+  });
+  return out.some(Boolean) || links.length !== jobs.length ? out : links.map((l) => l.url);
+}

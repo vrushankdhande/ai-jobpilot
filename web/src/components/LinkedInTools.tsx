@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ClipboardEvent, type FormEvent } from "react";
 import { api } from "../api";
 import { useFetch } from "../hooks";
 import { fmtDt } from "../format";
 import { buildImportBody, importMessage } from "../lib/discovery";
 import { linkedinSearchUrl, parseLinkedInJobUrl, suggestTitle } from "../lib/linkedin";
+import { attachLinks, jobLinksFromHtml, linkedinJobUrl, parseLinkedInResults, type JobLink, type PastedLinkedInJob } from "../lib/linkedinPaste";
 import { Alert, Check, DataTable, Empty, ErrorBox, Field, Loading } from "./ui";
 
 const MODES = ["remote", "hybrid", "onsite"] as const;
@@ -122,10 +123,111 @@ export function LinkedInJobsTable({ reloadKey = 0 }: { reloadKey?: number }) {
           { header: "Posted", render: (r) => (r.posted_date ? fmtDt(r.posted_date) : "Not stated") },
           { header: "Score", render: (r) => (r.match_score == null ? "Not scored" : `${r.match_score}%`) },
           { header: "Eligibility", render: (r) => r.eligibility ?? "Not scored" },
-          { header: "Link", render: (r) => (r.job_url ? <a href={r.job_url} target="_blank" rel="noopener noreferrer">Open on LinkedIn ↗</a> : "—") },
+          { header: "Link", render: (r) => <JobLinkCell url={r.job_url} title={r.job_title} company={r.company_name} /> },
           { header: "Application", render: (r) => r.application_status.replaceAll("_", " ").toLowerCase() },
         ]} />
       )}
+    </details>
+  );
+}
+
+/** The exact LinkedIn job link when we have it, otherwise a LinkedIn search for "title company" that YOU open (the job is usually the first result). */
+export function JobLinkCell({ url, title, company }: { url: string | null; title: string | null; company: string | null }) {
+  if (url) return <a href={url} target="_blank" rel="noopener noreferrer">Open on LinkedIn ↗</a>;
+  const search = linkedinSearchUrl({ keywords: `${title ?? ""} ${company ?? ""}` });
+  return search
+    ? <a href={search} target="_blank" rel="noopener noreferrer" title="No exact link was copied - this searches LinkedIn for the title and company">Find on LinkedIn ↗</a>
+    : <>—</>;
+}
+
+type LiRow = PastedLinkedInJob & { pick: boolean; tooOld: boolean; result?: string };
+
+/** Bulk paste of a LinkedIn search page the user copied themselves (Ctrl+A, Ctrl+C). The text is split into jobs in the browser; the job links
+ *  come from the HTML copy the browser puts on the clipboard. Only the jobs list and the open job's description are read - messages,
+ *  notifications and names on the page are ignored, and the pasted text is never stored or sent. Nothing contacts LinkedIn. */
+export function LinkedInBulkPaste({ onDone }: { onDone: () => void }) {
+  const prefs = useFetch<{ preferences?: { posted_within_days?: number | null } }>("/api/settings");
+  const maxAge = prefs.data?.preferences?.posted_within_days || null;
+  const [text, setText] = useState("");
+  const [links, setLinks] = useState<JobLink[]>([]);
+  const [address, setAddress] = useState("");
+  const [rows, setRows] = useState<LiRow[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    setLinks(jobLinksFromHtml(e.clipboardData.getData("text/html") ?? ""));   // the text itself is pasted by the browser as usual
+  }
+  function read() {
+    setSummary(null);
+    const jobs = attachLinks(parseLinkedInResults(text), links, address);
+    setRows(jobs.map((j) => {
+      const tooOld = maxAge !== null && j.ageDays !== null && j.ageDays > maxAge;
+      return { ...j, tooOld, pick: !tooOld };
+    }));
+  }
+  const set = (i: number, patch: Partial<LiRow>) => setRows((rs) => rs.map((r, k) => (k === i ? { ...r, ...patch } : r)));
+  const picked = rows.filter((r) => r.pick && !r.result);
+  const withLink = rows.filter((r) => r.jobId).length;
+
+  async function importAll() {
+    setBusy(true); setSummary(null);
+    let ok = 0, dup = 0, bad = 0, applied = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r.pick || r.result) continue;
+      const url = linkedinJobUrl(r.jobId);
+      const job: Record<string, string> = { job_title: r.title, company_name: r.company, location: r.location ?? "", job_description: r.description ?? "",
+        posted_date: r.postedDate ?? "", salary: r.salary ?? "", work_mode: r.workMode ?? "" };
+      const res = await api.post("/api/jobs/import", { json: { ...buildImportBody(url ?? "", job), ...(url ? {} : { source: "linkedin" }) } });
+      if (!res.ok) { bad++; set(i, { result: `❌ ${res.error ?? "Failed"}` }); continue; }
+      const action = res.data.action as string;
+      if (action === "insert") ok++; else dup++;
+      let note = (action === "insert" ? "✅ " : "↺ ") + importMessage(action, res.data.match);
+      if (!res.data.match && !r.description) note += " Not scored yet: paste its description into the quick import to score it.";
+      const jobId = res.data.job?.job_id;
+      if (r.applied && jobId) {
+        const a = await api.post("/api/applications/record-applied", { json: { job_id: jobId } });
+        if (a.ok) { applied++; note += " Marked as applied."; } else note += " Could not mark it applied - use the Applied switch.";
+      }
+      set(i, { result: note });
+    }
+    setBusy(false);
+    setSummary(`${ok} new job(s) imported, ${dup} already known (not added twice), ${bad} failed${applied ? `, ${applied} marked as applied` : ""}.`);
+    if (ok || dup) onDone();
+  }
+
+  return (
+    <details open>
+      <summary>📋 Bulk paste from a LinkedIn search page</summary>
+      <p className="muted">Open your search on LinkedIn, press <b>Ctrl+A</b> then <b>Ctrl+C</b>, and paste it here. JobPilot only reads what you copied - it never opens or reads LinkedIn. Only the jobs list and the
+        open job's description are used: your messages and notifications on the page are ignored, and the pasted text is not stored. LinkedIn's list has no descriptions, so those jobs are saved unscored; the job you had open is scored straight away.</p>
+      <Field label="Paste the copied LinkedIn search page"><textarea style={{ minHeight: 140 }} value={text} onPaste={onPaste} onChange={(e) => setText(e.target.value)} /></Field>
+      <Field label="Page address (optional - gives the open job its exact link)"><input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="https://www.linkedin.com/jobs/search/?currentJobId=…" /></Field>
+      {text.trim() !== "" && (
+        <div className="muted" role="status">
+          {links.length ? `🔗 ${new Set(links.map((l) => l.id)).size} job link(s) found in what you copied.` : "No job links came with the paste - each job gets a 'Find on LinkedIn' search link instead."}
+        </div>
+      )}
+      <button type="button" onClick={read} disabled={!text.trim() || busy}>Read jobs from the pasted text</button>
+      {rows.length === 0 && text.trim() !== "" && summary === null && <span className="muted"> Press the button to see the jobs found in the text.</span>}
+      {rows.length > 0 && (
+        <>
+          <p><b>{rows.length}</b> job(s) found, {withLink} with an exact link{rows.some((r) => r.tooOld) ? `; jobs older than ${maxAge} days are unticked` : ""}. Untick any you do not want, then import.</p>
+          <DataTable rows={rows} rowKey={(r, i) => `${i}-${r.title}-${r.company}`} columns={[
+            { header: "Import", render: (r) => <input type="checkbox" aria-label={`Import ${r.title} at ${r.company}`} checked={r.pick} disabled={Boolean(r.result)} onChange={(e) => set(rows.indexOf(r), { pick: e.target.checked })} /> },
+            { header: "Title", render: (r) => <>{r.title}{r.description ? <span className="muted"> (with description)</span> : null}</> },
+            { header: "Company", render: (r) => r.company },
+            { header: "Location", render: (r) => [r.location, r.workMode].filter(Boolean).join(" · ") || "—" },
+            { header: "Posted", render: (r) => (r.posted ?? "—") + (r.tooOld ? " (too old)" : "") },
+            { header: "Link", render: (r) => <JobLinkCell url={linkedinJobUrl(r.jobId)} title={r.title} company={r.company} /> },
+            { header: "On LinkedIn", render: (r) => (r.applied ? "Applied" : "—") },
+            { header: "Result", render: (r) => r.result ?? "" },
+          ]} />
+          <button type="button" className="primary" onClick={() => void importAll()} disabled={busy || picked.length === 0}>{busy ? "Importing…" : `Import ${picked.length} selected job(s)`}</button>
+        </>
+      )}
+      {summary && <Alert kind="success">{summary}</Alert>}
     </details>
   );
 }

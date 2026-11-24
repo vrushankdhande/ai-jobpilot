@@ -8,13 +8,13 @@ remote: true            # open to remote roles? (null = unknown)
 hybrid: true            # open to hybrid roles? (null = unknown)
 onsite: true            # open to fully on-site roles? (null = unknown)
 open_to_relocation: null
-notice_period: null     # e.g. "30 days" - used for screening answers; never guessed
-employment_types: []    # e.g. [full-time]
+notice_period: "30"     # e.g. "30 days" - used for screening answers; never guessed
+employment_types: [Full Time]    # e.g. [full-time]
 experience_years_min: null   # your experience range: jobs asking for far more/less can be filtered out
 experience_years_max: null
 posted_within_days: 90       # skip postings older than this many days (jobs with no date are kept; change in Settings)
 min_salary: null        # expected annual minimum
 salary_currency: null   # e.g. INR, USD
-work_authorization: []  # countries you are authorised to work in, e.g. ["India"]
-keywords_include: []
+work_authorization: [India]  # countries you are authorised to work in, e.g. ["India"]
+keywords_include: [Machine Learning]
 keywords_exclude: []

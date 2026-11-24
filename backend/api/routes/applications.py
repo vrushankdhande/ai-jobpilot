@@ -115,6 +115,11 @@ def record_applied(body: RecordAppliedRequest, svc: ApplicationService = Depends
     return _guard(lambda: svc.record_applied_yourself(body.job_id, notes=body.notes))
 
 
+@router.post("/undo-applied", summary="Undo your own \"I applied\" record (the Applied switch); never an application JobPilot submitted")
+def undo_applied(body: RecordAppliedRequest, svc: ApplicationService = Depends(get_application_service)):
+    return _guard(lambda: svc.undo_recorded_applied(body.job_id))
+
+
 @router.post("/states", summary="Application state per job (for the 'applied' switches)")
 def applied_states(body: AppliedStatesRequest, svc: ApplicationService = Depends(get_application_service)):
     return svc.applied_states([j for j in body.job_ids if isinstance(j, str) and len(j) == 32])

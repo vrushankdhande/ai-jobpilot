@@ -6,12 +6,14 @@ import httpx
 from config.settings import Settings
 from integrations.base_adapter import JobAdapter, PolicyHttp, RateLimiter
 from integrations.career_pages.adapter import CareerPagesAdapter, load_company_sources
+from integrations.email.alerts_adapter import JobAlertEmailAdapter
 from integrations.indeed.adapter import IndeedAdapter
 from integrations.instahyre.adapter import InstahyreAdapter
 from integrations.linkedin.adapter import LinkedInAdapter
 from integrations.manual_adapter import ManualImportAdapter
 from integrations.naukri.adapter import NaukriAdapter
 from integrations.policy import Policy, PolicyRegistry
+from notifications.email_notifications import CredentialStore
 
 
 def build_adapters(settings: Settings, registry: PolicyRegistry | None = None, client: httpx.Client | None = None,
@@ -35,5 +37,8 @@ def build_adapters(settings: Settings, registry: PolicyRegistry | None = None, c
         "manual": ManualImportAdapter(registry.get("manual")),
         "career_pages": CareerPagesAdapter(parent, registry, http_factory, load_company_sources(settings),
                                            user_agent=registry.user_agent),
+        "email_alerts": JobAlertEmailAdapter(registry.get("email_alerts"), http_factory(registry.get("email_alerts")),
+                                             CredentialStore(settings.job_alert_credentials_path, settings.secret_key),
+                                             lookback_days=settings.job_alert_lookback_days),
     }
     return adapters
