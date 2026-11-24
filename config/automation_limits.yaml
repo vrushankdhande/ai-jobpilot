@@ -17,11 +17,11 @@ min_match_score: 70                       # below this a job is not queued (chos
 queue_lease_seconds: 900                  # a task stuck "processing" longer than this is recovered after a crash
 
 # Local-time windows (timezone below). Outside them the scheduler/worker do nothing; manual runs ignore the discovery window.
-discovery_window: ["06:00", "22:00"]
-application_window: ["09:00", "21:00"]
+discovery_window: ['06:00', '22:00']
+application_window: ['09:00', '21:00']
 
 scheduler:
   timezone: Asia/Kolkata
-  discovery_time: "07:00"                 # daily discovery run
+  discovery_time: 07:00                 # daily discovery run
   report_time: "20:00"                    # daily report (and e-mail, if configured)
   catchup_grace_minutes: 240              # after a restart, a missed run is made up only if it was due within this long ago

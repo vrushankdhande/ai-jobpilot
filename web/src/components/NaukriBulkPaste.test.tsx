@@ -51,3 +51,26 @@ describe("NaukriBulkPaste", () => {
     expect(screen.getByText(/0 new job\(s\) imported, 0 already known \(not added twice\), 1 failed/)).toBeInTheDocument();
   });
 });
+
+describe("NaukriBulkPaste links", () => {
+  it("fills each job's link from the copied page and imports with it (no source hint needed)", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    fetchMock.mockResolvedValue(json(201, { action: "insert", match: null }));
+    render(<NaukriBulkPaste onDone={() => {}} />);
+    const box = screen.getByLabelText("Paste the copied Naukri results page");
+    const html = `<a href="https://www.naukri.com/job-listings-ai-engineer-acme-pune-5-to-10-years-211125012345?src=x">AI Engineer</a>`;
+    fireEvent.paste(box, { clipboardData: { getData: (t: string) => (t === "text/html" ? html : PAGE) } });
+    fireEvent.change(box, { target: { value: PAGE } });
+    expect(screen.getByText(/1 job link\(s\) found in what you copied/)).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Read jobs from the pasted text" }));
+    expect(screen.getByLabelText("Link for AI Engineer")).toHaveValue("https://www.naukri.com/job-listings-ai-engineer-acme-pune-5-to-10-years-211125012345");
+    expect(screen.getByLabelText("Link for Data Scientist")).toHaveValue("");
+    await user.click(screen.getByLabelText("Import Data Scientist at Beta Labs"));
+    await user.click(screen.getByRole("button", { name: "Import 1 selected job(s)" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.url).toBe("https://www.naukri.com/job-listings-ai-engineer-acme-pune-5-to-10-years-211125012345");
+    expect(body.source).toBeUndefined();
+  });
+});

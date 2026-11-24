@@ -1,8 +1,8 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type ClipboardEvent, type FormEvent } from "react";
 import { api } from "../api";
 import { buildImportBody, importMessage } from "../lib/discovery";
 import { suggestTitle } from "../lib/linkedin";
-import { naukriSearchUrl, parseNaukriJobUrl, parseNaukriResults, type PastedNaukriJob } from "../lib/naukri";
+import { naukriLinksFor, naukriLinksFromHtml, naukriSearchUrl, parseNaukriJobUrl, parseNaukriResults, type NaukriLink, type PastedNaukriJob } from "../lib/naukri";
 import { Alert, DataTable, Field } from "./ui";
 
 /** Builds a Naukri search link for YOU to open. This app never contacts Naukri (manual-only by policy: no scraping, no automated login). */
@@ -88,13 +88,19 @@ type Row = PastedNaukriJob & { pick: boolean; link: string; result?: string };
  *  browser; the ticked ones are imported one by one through the normal import API, each scored straight away. Nothing contacts Naukri. */
 export function NaukriBulkPaste({ onDone }: { onDone: () => void }) {
   const [text, setText] = useState("");
+  const [links, setLinks] = useState<NaukriLink[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
 
   function read() {
     setSummary(null);
-    setRows(parseNaukriResults(text).map((j) => ({ ...j, pick: true, link: "" })));
+    const jobs = parseNaukriResults(text);
+    const found = naukriLinksFor(jobs, links);
+    setRows(jobs.map((j, i) => ({ ...j, pick: true, link: found[i] ?? "" })));
+  }
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    setLinks(naukriLinksFromHtml(e.clipboardData.getData("text/html") ?? ""));   // the job links that came with the copy; the text is pasted as usual
   }
   const set = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, k) => (k === i ? { ...r, ...patch } : r)));
   const picked = rows.filter((r) => r.pick && !r.result);
@@ -123,8 +129,9 @@ export function NaukriBulkPaste({ onDone }: { onDone: () => void }) {
     <details open>
       <summary>📋 Bulk paste from a Naukri results page</summary>
       <p className="muted">Open your search on Naukri, press <b>Ctrl+A</b> then <b>Ctrl+C</b> on the results page, and paste it here. JobPilot only splits the text you copied into jobs - it never opens or reads Naukri.
-        A results page shows a short summary per job, so scores are rougher than with the full description; add a job's link if you want it stored.</p>
-      <Field label="Paste the copied Naukri results page"><textarea style={{ minHeight: 140 }} value={text} onChange={(e) => setText(e.target.value)} /></Field>
+        The job links that come with your copy are filled in automatically. A results page shows a short summary per job, so scores are rougher than with the full description.</p>
+      <Field label="Paste the copied Naukri results page"><textarea style={{ minHeight: 140 }} value={text} onPaste={onPaste} onChange={(e) => setText(e.target.value)} /></Field>
+      {text.trim() !== "" && <div className="muted" role="status">{links.length ? `🔗 ${links.length} job link(s) found in what you copied - they are filled in for you.` : "No job links came with the paste - you can add a job's link by hand."}</div>}
       <button type="button" onClick={read} disabled={!text.trim() || busy}>Read jobs from the pasted text</button>
       {rows.length === 0 && text.trim() !== "" && summary === null && <span className="muted"> Press the button to see the jobs found in the text.</span>}
       {rows.length > 0 && (

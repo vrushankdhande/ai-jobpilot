@@ -555,3 +555,34 @@ def test_companies_late_in_the_list_are_still_read_when_early_boards_are_large(m
     service.execute(run["run_id"], query, runnable)
     stored = [d["company_name"] for d in service.jobs._jobs.find({}, {"company_name": 1})]
     assert stored == ["LateCo"]                                                  # BigCo's 6 US jobs no longer crowd out the India job listed later
+
+
+def test_linkedin_bulk_paste_job_without_description_is_stored_unscored_with_its_link_and_details(jobs_api, seeded):
+    # What the LinkedIn bulk paste sends for a list-only job: no description, an approximate date, a work mode, a salary text.
+    client, service, rec = jobs_api
+    body = {"url": "https://www.linkedin.com/jobs/view/4300000014/", "job": {"job_title": "Data Scientist ML/Gen AI Engineer", "company_name": "Irth", "location": "India",
+            "work_mode": "remote", "posted_date": "2026-10-25", "salary": "$45K/yr - $45K/yr"}}
+    r = client.post("/api/jobs/import", json=body)
+    assert r.status_code == 201 and rec.requests == [] and r.json()["match"] is None                 # nothing fetched; nothing to score yet
+    j = r.json()["job"]
+    assert j["source"] == "linkedin" and j["source_job_id"] == "4300000014" and j["work_mode"] == "remote" and j["location"] == ["India"]
+    assert j["posted_date"].startswith("2026-10-25")
+    # later the candidate pastes the description into the quick import: same job (no duplicate), and now it is scored
+    body["job"]["job_description"] = "Requirements:\n- Python, PyTorch and LLMs.\n- 3+ years of experience in machine learning."
+    again = client.post("/api/jobs/import", json=body)
+    assert again.status_code == 200 and again.json()["action"] in ("update", "unchanged") and again.json()["match"] is not None
+    assert len(client.get("/api/jobs", params={"source": "linkedin"}).json()) == 1
+    no_link = client.post("/api/jobs/import", json={"source": "linkedin", "job": {"job_title": "AI Engineer", "company_name": "Jeeves", "location": "India", "work_mode": "remote"}})
+    assert no_link.status_code == 201 and no_link.json()["job"]["source"] == "linkedin" and no_link.json()["job"]["job_url"] is None
+
+
+def test_naukri_job_with_its_link_is_stored_as_naukri_with_the_clean_link_and_fetches_nothing(jobs_api):
+    client, service, rec = jobs_api
+    url = "https://www.naukri.com/job-listings-ai-engineer-acme-pune-5-to-10-years-211125012345"
+    body = {"url": url, "job": {"job_title": "AI Engineer", "company_name": "Acme Analytics", "location": "Pune", "experience_requirement": "5-10 Yrs",
+            "job_description": "AI Engineer\nAcme Analytics\nBuild LLM apps with Python and PyTorch."}}
+    r = client.post("/api/jobs/import", json=body)
+    assert r.status_code == 201 and rec.requests == []                                               # the link is stored, never opened
+    j = r.json()["job"]
+    assert j["source"] == "naukri" and j["source_job_id"] == "211125012345" and "naukri.com/job-listings-ai-engineer" in j["job_url"]
+    assert client.post("/api/jobs/import", json=body).json()["action"] != "insert"

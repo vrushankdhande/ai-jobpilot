@@ -177,13 +177,14 @@ class PolicyHttp:
         if not host_allowed(p.hostname, list(self.policy.allowed_hosts) + list(self.extra_hosts)):
             raise PolicyViolation(f"Host '{p.hostname}' is not on the allow-list for {self.policy.name}")
 
-    def get(self, url: str, params: dict | None = None, accept: str = "application/json") -> httpx.Response:
+    def get(self, url: str, params: dict | None = None, accept: str = "application/json", headers: dict | None = None) -> httpx.Response:
+        """``headers`` adds request headers (e.g. an OAuth bearer token for an official API); it cannot replace the User-Agent."""
         for _hop in range(4):  # follow at most 3 redirects, re-validating every hop
             self._check(url)
             self.limiter.acquire()
             try:
                 resp = self.client.get(url, params=params, timeout=self.timeout, follow_redirects=False,
-                                       headers={"User-Agent": self.user_agent, "Accept": accept})
+                                       headers={**(headers or {}), "User-Agent": self.user_agent, "Accept": accept})
             except httpx.TimeoutException:
                 raise AdapterError("The source timed out") from None
             except httpx.HTTPError:

@@ -1,6 +1,6 @@
 // Pure logic for the Job Discovery page (port of the helpers in frontend/pages/02_job_discovery.py). No React; unit-tested.
 export const STATUS_ICON: Record<string, string> = { ENABLED: "✅", MANUAL_ONLY: "✋", DISABLED: "⛔", PENDING_POLICY_REVIEW: "⏳" };
-export const SOURCE_LABEL: Record<string, string> = { career_pages: "Company career pages", linkedin: "LinkedIn", indeed: "Indeed", naukri: "Naukri", instahyre: "Instahyre", manual: "Manual entry" };
+export const SOURCE_LABEL: Record<string, string> = { career_pages: "Company career pages", linkedin: "LinkedIn", indeed: "Indeed", naukri: "Naukri", instahyre: "Instahyre", manual: "Manual entry", email_alerts: "Job-alert e-mails (Gmail)" };
 export const sourceLabel = (s: string): string => SOURCE_LABEL[s] ?? s;
 
 export const WORK_MODES = ["remote", "hybrid", "onsite"];

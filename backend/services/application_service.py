@@ -504,6 +504,23 @@ class ApplicationService:
             self.manual_handoff(rec["application_id"])
         return self.confirm(rec["application_id"], submitted=True, notes=notes)   # a click alone is SUBMITTED (your word), not VERIFIED (needs a reference or note)
 
+    def undo_recorded_applied(self, job_id: str) -> dict:
+        """Undo the candidate's own "I applied" record (the Applied switch), e.g. after flipping it by mistake. Allowed ONLY when JobPilot never
+        tried to submit (attempts == 0), the record is the candidate's word (outcome user_reported) and it is not VERIFIED. The application goes
+        back to MANUAL_HANDOFF_REQUIRED ("apply yourself"); the history keeps both events (append-only)."""
+        rec = self.apps.col.find_one({"job_id": job_id, "state": S.SUBMITTED.value}, {"_id": 0}, sort=[("created_at", -1)])
+        if rec is None:
+            if self.apps.col.find_one({"job_id": job_id, "state": S.VERIFIED.value}, {"_id": 1}):
+                raise ActionNotAllowed("This application is verified (it has a confirmation reference or note), so it cannot be undone.")
+            raise ApplicationNotFound("No 'applied' record for this job.")
+        sub = rec.get("submission") or {}
+        if rec.get("attempts", 0) or sub.get("outcome") != "user_reported" or sub.get("verified_by") != "user":
+            raise ActionNotAllowed("Only an 'applied' that you recorded yourself can be undone; this one was submitted by JobPilot.")
+        manual = {k: v for k, v in (rec.get("manual") or {}).items() if k != "confirmed_at"}
+        moved = self._move(rec, S.MANUAL_HANDOFF_REQUIRED, event="applied_record_undone", actor="candidate",
+                           fields={"submission": _dump(SubmissionResult()), "submitted_at": None, "manual": manual})
+        return self._public(moved)
+
     def applied_states(self, job_ids: list[str]) -> dict[str, str]:
         """job_id -> the state of its application (newest), for showing an "applied" switch next to each job."""
         out: dict[str, str] = {}

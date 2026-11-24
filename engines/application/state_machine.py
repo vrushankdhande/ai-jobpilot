@@ -26,7 +26,9 @@ TRANSITIONS: dict[AppState, frozenset[AppState]] = {
     # approval is withdrawn (back to review) when anything it covered changes; the submit attempt is the only way on
     S.APPROVED: frozenset({S.SUBMITTING, S.READY_FOR_REVIEW, S.AWAITING_USER_INPUT, S.MANUAL_HANDOFF_REQUIRED}),
     S.SUBMITTING: frozenset({S.SUBMITTED, S.SUBMISSION_FAILED, S.VERIFICATION_PENDING}),   # VERIFIED only after SUBMITTED (two recorded steps)
-    S.SUBMITTED: frozenset({S.VERIFIED}),
+    # back to MANUAL_HANDOFF_REQUIRED only to undo the candidate's OWN 'I applied' record (no JobPilot attempt, not verified); the
+    # service enforces that - an application JobPilot submitted can never be un-submitted
+    S.SUBMITTED: frozenset({S.VERIFIED, S.MANUAL_HANDOFF_REQUIRED}),
     # ambiguous outcome: only a human (or later reliable evidence) resolves it - never an automatic resubmission
     S.VERIFICATION_PENDING: frozenset({S.SUBMITTED, S.VERIFIED, S.SUBMISSION_FAILED}),
     # a failed attempt may be prepared again (only when the failure was certain, see retry_manager) or handed to the user

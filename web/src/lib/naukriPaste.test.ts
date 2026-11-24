@@ -68,3 +68,25 @@ describe("postedToDate", () => {
     expect(postedToDate(null, TODAY)).toBeNull();
   });
 });
+
+describe("Naukri links from the clipboard's HTML copy", async () => {
+  const { naukriLinksFromHtml, naukriLinksFor } = await import("./naukri");
+  it("keeps only real naukri.com job links, without tracking parameters, and matches them to jobs by title", () => {
+    const html = `<a href="https://www.naukri.com/job-listings-ai-engineer-acme-pune-5-to-10-years-211125012345?src=jobsearchDesk&sid=1">AI Engineer</a>
+      <a href="/acme-analytics-jobs-careers-123">Acme Analytics</a><a href="https://naukri.com.evil.example/job-listings-x-211125099999">Data Scientist</a>
+      <a href="/job-listings-data-scientist-beta-labs-mumbai-2-to-5-years-211125054321">Data Scientist</a>`;
+    const links = naukriLinksFromHtml(html);
+    expect(links).toEqual([
+      { url: "https://www.naukri.com/job-listings-ai-engineer-acme-pune-5-to-10-years-211125012345", text: "AI Engineer" },
+      { url: "https://www.naukri.com/job-listings-data-scientist-beta-labs-mumbai-2-to-5-years-211125054321", text: "Data Scientist" },
+    ]);
+    expect(naukriLinksFor([{ title: "Data Scientist" }, { title: "AI Engineer" }, { title: "ML Engineer" }], links))
+      .toEqual([links[1].url, links[0].url, ""]);
+  });
+  it("falls back to page order when no link text matches but the counts agree, and gives nothing otherwise", () => {
+    const links = [{ url: "https://www.naukri.com/job-listings-a-211125000001", text: "" }, { url: "https://www.naukri.com/job-listings-b-211125000002", text: "" }];
+    expect(naukriLinksFor([{ title: "A" }, { title: "B" }], links)).toEqual([links[0].url, links[1].url]);
+    expect(naukriLinksFor([{ title: "A" }], links)).toEqual([""]);
+    expect(naukriLinksFromHtml("")).toEqual([]);
+  });
+});
