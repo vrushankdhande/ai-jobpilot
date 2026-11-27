@@ -73,6 +73,14 @@ describe("web proxy", () => {
     expect(seen.headers.cookie).toBeUndefined();
   });
 
+  it("forwards ONLY the sign-in cookie, and only a well-formed one", async () => {
+    const sid = "A".repeat(43);
+    await fetch(`${webUrl}/api/jobs`, { headers: { Cookie: `other=x; jp_session=${sid}; tracking=y` } });
+    expect(seen.headers.cookie).toBe(`jp_session=${sid}`);
+    await fetch(`${webUrl}/api/jobs`, { headers: { Cookie: "jp_session=bad value;evil" } });
+    expect(seen.headers.cookie).toBeUndefined();
+  });
+
   it("streams request bodies (JSON) unchanged", async () => {
     await fetch(`${webUrl}/api/matching/analyze-jd`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ a: 1 }) });
     expect(seen.body).toBe('{"a":1}');

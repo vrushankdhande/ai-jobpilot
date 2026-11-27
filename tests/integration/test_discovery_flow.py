@@ -586,3 +586,35 @@ def test_naukri_job_with_its_link_is_stored_as_naukri_with_the_clean_link_and_fe
     j = r.json()["job"]
     assert j["source"] == "naukri" and j["source_job_id"] == "211125012345" and "naukri.com/job-listings-ai-engineer" in j["job_url"]
     assert client.post("/api/jobs/import", json=body).json()["action"] != "insert"
+
+
+def test_pasting_a_description_into_a_job_from_an_alert_e_mail_scores_that_same_job_and_fetches_nothing(jobs_api, seeded):
+    client, service, rec = jobs_api
+    # jobs as alert e-mails store them: link, title, company, place - no description
+    for url, title in (("https://www.instahyre.com/job-448472-associate-architect-ml-at-quantiphi-analytics-bangalore-mumbai/", "Associate Architect - ML"),
+                       ("https://www.glassdoor.co.in/Job/jobs.htm?sc.keyword=AI+Engineer+Acme+Robotics", "AI Engineer")):
+        r = client.post("/api/jobs/import", json={"url": url, "job": {"job_title": title, "company_name": "Acme Robotics", "location": "Bangalore"}})
+        assert r.status_code == 201 and r.json()["match"] is None
+        jid = r.json()["job"]["job_id"]
+        text = ("About the role: build and deploy machine learning systems.\nRequirements:\n- 3+ years of experience in machine learning.\n"
+                "- Python, PyTorch, LLMs and MLOps on AWS.\n- Experience with retrieval-augmented generation.\n") * 2
+        done = client.post(f"/api/jobs/{jid}/description", json={"job_description": text})
+        assert done.status_code == 200, done.text
+        assert done.json()["job"]["job_id"] == jid and "PyTorch" in done.json()["job"]["job_description"]   # the SAME job, now with its description
+        assert done.json()["match"] is not None and done.json()["match"]["match_score"] is not None          # and scored right away
+        assert client.post(f"/api/jobs/{jid}/description", json={"job_description": text}).status_code == 409   # never replaces a description
+    assert rec.requests == []                                                                             # nothing was fetched from any site
+    assert client.post(f"/api/jobs/{jid}/description", json={"job_description": "too short"}).status_code == 422
+    assert client.post(f"/api/jobs/{'f' * 32}/description", json={"job_description": text}).status_code == 404
+    assert len(client.get("/api/jobs").json()) == 2                                                       # no duplicate jobs were created
+
+
+def test_one_unreadable_job_record_does_not_break_the_job_list(jobs_api, test_db):
+    client, service, rec = jobs_api
+    ok = client.post("/api/jobs/import", json={"job": {"job_title": "AI Engineer", "company_name": "Acme", "location": "Pune",
+                                                       "job_description": "Build LLM apps with Python and PyTorch for enterprise search."}})
+    assert ok.status_code == 201
+    test_db["jobs"].insert_one({"job_id": "e" * 32, "content_hash": "broken", "company_key": None, "job_title": "Broken"})   # e.g. a bad manual edit
+    r = client.get("/api/jobs/page", params={"limit": 50})
+    assert r.status_code == 200 and [j["job_title"] for j in r.json()["items"]] == ["AI Engineer"]
+    assert client.get("/api/jobs").status_code == 200

@@ -29,6 +29,7 @@ class DatabaseManager:
         self._timeout_ms = 3000
         self._clock, self._last_attempt = clock, None
         self.on_connect: Callable[[Database], None] | None = None   # e.g. ensure_indexes
+        self._prepared: set[str] = set()
 
     @property
     def is_connected(self) -> bool:
@@ -80,6 +81,26 @@ class DatabaseManager:
                 pass
         if self._client is None or self._database_name is None:
             raise DatabaseConnectionError("MongoDB is not connected")
+        from config.tenant import current_tenant, database_for
+        name = database_for(self._database_name, current_tenant.get())      # the signed-in person's OWN database
+        if name != self._database_name and name not in self._prepared:
+            if self.on_connect is not None:
+                try:
+                    self.on_connect(self._client[name])                     # indexes for a new person's database
+                except Exception as exc:  # noqa: BLE001
+                    logger.error("MongoDB post-connect hook failed: %s", type(exc).__name__)
+            self._prepared.add(name)
+        return self._client[name]
+
+    def base_database(self) -> Database:
+        """The owner's database, which also holds the accounts (users and sessions)."""
+        if self._client is None:
+            from config.tenant import current_tenant
+            token = current_tenant.set(None)
+            try:
+                return self.get_database()
+            finally:
+                current_tenant.reset(token)
         return self._client[self._database_name]
 
     def close(self) -> None:
@@ -89,6 +110,7 @@ class DatabaseManager:
         self._client = None
         self._database_name = None
         self._uri = None
+        self._prepared = set()
 
 
 # Process-wide instance, initialised in the FastAPI lifespan.

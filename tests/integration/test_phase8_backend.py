@@ -203,13 +203,19 @@ def test_applications_page_filters_dates_and_pagination(app_client):
     now = datetime.now(UTC)
     for i in range(7):
         a = apps.insert(app_doc(job=f"{i:032x}", state="SUBMITTED" if i % 2 else "AWAITING_USER_INPUT", company_name=f"Co{i}"))
-        apps.col.update_one({"application_id": a["application_id"]}, {"$set": {"updated_at": now - timedelta(days=i)}})   # (update() always stamps "now")
+        day = now - timedelta(days=i)                                                                    # the date the list shows
+        apps.col.update_one({"application_id": a["application_id"]}, {"$set": {"created_at": day - timedelta(days=5) if i % 2 else day, "updated_at": now,
+                                                                               **({"submitted_at": day} if i % 2 else {})}})
     allp = c.get("/api/applications/page", params={"limit": 3}).json()
     assert allp["total"] == 7 and len(allp["items"]) == 3
     seen = {i["application_id"] for s in (0, 3, 6) for i in c.get("/api/applications/page", params={"limit": 3, "skip": s}).json()["items"]}
     assert len(seen) == 7                                                                               # pages cover everything exactly once
     assert c.get("/api/applications/page", params={"state": "SUBMITTED"}).json()["total"] == 3
+    # dates filter on the date shown (submitted, else created) - not on the last change: every record was "updated" just now
     assert c.get("/api/applications/page", params={"date_from": (now - timedelta(days=2, hours=12)).isoformat()}).json()["total"] == 3
+    assert c.get("/api/applications/page", params={"date_from": (now - timedelta(days=3, hours=12)).isoformat(), "date_to": (now - timedelta(days=2, hours=12)).isoformat(),
+                                                   "q": "Co3"}).json()["total"] == 1                     # submitted 3 days ago (created 8 days ago)
+    assert c.get("/api/applications/page", params={"date_from": (now - timedelta(hours=1)).isoformat(), "states": ["SUBMITTED"]}).json()["total"] == 0
     assert c.get("/api/applications/page", params={"limit": 0}).status_code == 422
 
 

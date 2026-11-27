@@ -26,7 +26,8 @@ from database.repositories.applications_repository import ApplicationsRepository
 from engines.application.application_engine import ApplicationEngine, FormRun, SubmitTracker
 from engines.application.document_uploader import Selection, select_documents
 from engines.application.document_validator import ValidationInput, validate_application
-from engines.application.form_mapper import Facts, normalize
+from browser.locator_engine import FormField
+from engines.application.form_mapper import Facts, _profile_value, normalize
 from engines.application.retry_manager import DuplicateCheck, RetryManager
 from engines.application.state_machine import (
     SUBMISSION_MAY_EXIST, AppState, InvalidTransition, allowed_from, check_transition,
@@ -141,8 +142,15 @@ class ApplicationService:
         job = self._job(job_id)
         if job.get("status") in ("closed", "expired"):
             raise ActionNotAllowed("This job is no longer active.")
-        report, _ = self.matching.score(job_id=job_id, resume_id=profile.resume_id, allow_unreviewed=allow_unreviewed, use_ai=False)
-        elig = report.eligibility.status
+        if (job.get("job_description") or "").strip():
+            report, _ = self.matching.score(job_id=job_id, resume_id=profile.resume_id, allow_unreviewed=allow_unreviewed, use_ai=False)
+            elig, match_id, match_score = report.eligibility.status, report.match_id, report.match_score
+        else:
+            # a job from an alert e-mail has no description yet: it cannot be checked, so eligibility is UNKNOWN (never PASS). Preparing an
+            # application needs the description; only "I applied myself" (which acknowledges eligibility) may go ahead without it.
+            if not acknowledge_ineligible:
+                raise ActionNotAllowed("This job has no description yet, so it cannot be checked or prepared. Add it first (＋ Paste description).")
+            report, elig, match_id, match_score = None, "UNKNOWN", None, None
         if elig == "FAIL" and not acknowledge_ineligible:
             raise NotEligible("This job failed the eligibility check (" + "; ".join(report.eligibility.failed_checks[:3]) + "). "
                               "Acknowledge it explicitly to prepare an application anyway.")
@@ -165,8 +173,8 @@ class ApplicationService:
         else:
             new = ApplicationRecord(
                 idempotency_key=key, job_id=job_id, resume_id=profile.resume_id, profile_id=profile.profile_id, profile_version=profile.profile_version,
-                match_id=report.match_id, job_title=job.get("job_title"), company_name=job.get("company_name"), source=adapter.source,
-                provider=adapter.provider, apply_url=url, policy=adapter.decision.as_dict(), eligibility=elig, match_score=report.match_score)
+                match_id=match_id, job_title=job.get("job_title"), company_name=job.get("company_name"), source=adapter.source,
+                provider=adapter.provider, apply_url=url, policy=adapter.decision.as_dict(), eligibility=elig, match_score=match_score)
             try:
                 rec = self.apps.insert(new)
             except DuplicateKeyError:  # a concurrent request created it first
@@ -177,8 +185,8 @@ class ApplicationService:
             if isinstance(v, (str, bool)) and (not isinstance(v, str) or v.strip()):
                 inputs[normalize(k) or k] = v.strip() if isinstance(v, str) else v
         self.apps.update(rec["application_id"], {
-            "inputs": inputs, "profile_id": profile.profile_id, "profile_version": profile.profile_version, "match_id": report.match_id,
-            "eligibility": elig, "match_score": report.match_score, "allow_unreviewed": allow_unreviewed, "apply_url": url,
+            "inputs": inputs, "profile_id": profile.profile_id, "profile_version": profile.profile_version, "match_id": match_id,
+            "eligibility": elig, "match_score": match_score, "allow_unreviewed": allow_unreviewed, "apply_url": url,
             "ack_ineligible": bool(acknowledge_ineligible), "ack_possible_duplicate": bool(acknowledge_possible_duplicate),
             "policy": adapter.decision.as_dict(), "provider": adapter.provider, "approval": None, "dismissed_at": None, "dismissed_reason": None})
         self.refresh(rec["application_id"])
@@ -521,6 +529,48 @@ class ApplicationService:
                            fields={"submission": _dump(SubmissionResult()), "submitted_at": None, "manual": manual})
         return self._public(moved)
 
+    # ------------------------------------------------------------------------------------------------- autofill (candidate's own browser)
+    AUTOFILL_FIELDS = (("first_name", "First name"), ("last_name", "Last name"), ("full_name", "Full name"), ("email", "E-mail"), ("phone", "Phone"),
+                       ("linkedin_url", "LinkedIn"), ("github_url", "GitHub"), ("portfolio_url", "Portfolio / website"), ("location", "Location"),
+                       ("city", "City"), ("current_company", "Current company"), ("current_title", "Current job title"),
+                       ("years_experience", "Years of experience"), ("skills", "Skills"), ("education_degree", "Degree"),
+                       ("education_institution", "University / college"), ("cover_letter_text", "Cover letter"))
+    PERSONAL_FIELDS = (("notice_period", "Notice period"), ("salary_expectation", "Expected salary"), ("relocation", "Open to relocation"),
+                       ("work_authorization", "Work authorisation"))
+
+    def autofill(self, job_id: str) -> dict:
+        """Values for the candidate to fill an application form in THEIR OWN browser (the JobPilot Autofill bookmark). Same sources and rules as
+        the form mapper: the reviewed profile, the APPROVED cover letter and screening answers for this job, and personal details the candidate
+        recorded (preferences / typed answers). Nothing is guessed; missing values are listed, not invented. Nothing is submitted or sent anywhere."""
+        job = self._job(job_id)
+        profile = self.matching.profile_for_matching(None, False)          # the active, REVIEWED profile (raises otherwise)
+        sel = select_documents(self.documents, profile.resume_id, job_id)
+        try:
+            typed = (sel.screening or {}).get("candidate_inputs") or {}
+            facts = Facts(profile=profile, answers=sel.answers, cover_letter_text=sel.cover_letter_text, personal=effective_inputs(self.documents.prefs, typed))
+            fields, missing = [], []
+            for key, label in self.AUTOFILL_FIELDS:
+                canonical = "location" if key == "city" else key
+                value, source, derived, note = _profile_value(canonical, FormField(id="autofill", kind="text", label=label), facts)
+                if value and str(value).strip():
+                    fields.append({"key": key, "label": label, "value": str(value).strip(), "derived": derived, "note": note, "source": source})
+                elif key not in ("full_name", "city"):
+                    missing.append(label)
+            for key, label in self.PERSONAL_FIELDS:
+                value = facts.personal.get(key)
+                if value:
+                    fields.append({"key": key, "label": label, "value": str(value), "derived": False, "note": None, "source": "your preferences / answers"})
+                else:
+                    missing.append(label)
+            answers = [{"question": a["question"], "answer": a["answer"]} for a in sel.answers.values()]
+            problems = [x for x in sel.problems if "resume" not in x.lower()]              # the resume is attached by hand anyway
+        finally:
+            sel.cleanup()
+        adapter = resolve_application_adapter(job, self.policy)
+        return {"job": {"job_id": job_id, "title": job.get("job_title"), "company": job.get("company_name"),
+                        "apply_url": public_http_url(self._apply_url(job, adapter))},
+                "fields": fields, "answers": answers, "missing": missing, "problems": problems}
+
     def applied_states(self, job_ids: list[str]) -> dict[str, str]:
         """job_id -> the state of its application (newest), for showing an "applied" switch next to each job."""
         out: dict[str, str] = {}
@@ -580,7 +630,7 @@ class ApplicationService:
 
     def list_applications(self, **filters) -> list[dict]:
         return [{k: r.get(k) for k in ("application_id", "job_id", "job_title", "company_name", "source", "provider", "mode", "state", "eligibility", "match_score",
-                                       "created_at", "updated_at", "submitted_at", "verified_at", "apply_url", "user_notes", "dismissed_at")}
+                                       "created_at", "updated_at", "submitted_at", "verified_at", "apply_url", "user_notes", "dismissed_at", "employer_response")}
                 | {"reference": (r.get("submission") or {}).get("reference"), "verified_by": (r.get("submission") or {}).get("verified_by")}
                 for r in self.apps.find_all(**filters)]
 

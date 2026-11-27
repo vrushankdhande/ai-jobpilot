@@ -58,13 +58,13 @@ describe("api client", () => {
     expect(await api.get("/api/x")).toMatchObject({ ok: false, error: "Backend unreachable. Is the API running?" });
   });
 
-  it("sends JSON bodies with a content type and never sends credentials", async () => {
+  it("sends JSON bodies with a content type and only same-origin credentials (the HttpOnly sign-in cookie)", async () => {
     const f = vi.fn().mockResolvedValue(json(201, { id: 1 }));
     vi.stubGlobal("fetch", f);
     await api.post("/api/interviews", { json: { company_name: "Co" } });
     expect(f.mock.calls[0][1].body).toBe('{"company_name":"Co"}');
     expect(f.mock.calls[0][1].headers["Content-Type"]).toBe("application/json");
-    expect(f.mock.calls[0][1].credentials).toBe("omit");
+    expect(f.mock.calls[0][1].credentials).toBe("same-origin");
   });
 });
 

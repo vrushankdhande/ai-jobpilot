@@ -7,11 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from pydantic import BaseModel, Field
 
 from backend.api.routes.documents import get_document_service
+from backend.api.routes.jobs import get_discovery_service
+from backend.services.discovery_service import DiscoveryService
 from backend.api.security import require_admin_if_configured
 from backend.services.application_service import (
     ActionNotAllowed, ApplicationNotFound, ApplicationService, DuplicateApplication, LimitReached, NotEligible,
 )
 from backend.services.document_service import DocumentNotFound, DocumentService
+from backend.services.rejection_service import RejectionNotAllowed, RejectionNotFound, RejectionService
 from backend.services.matching_service import JobNotFound, MatchNotFound, NoActiveResume, ProfileMissing, UnreviewedProfile
 from browser.screenshot_manager import ScreenshotManager
 from browser.session_manager import SessionManager
@@ -76,6 +79,10 @@ class AppliedStatesRequest(BaseModel):
     job_ids: list[str] = Field(default_factory=list, max_length=200)
 
 
+class RejectionConfirmRequest(BaseModel):
+    application_id: str = Field(pattern=HEX32)
+
+
 class ConfirmRequest(BaseModel):
     submitted: bool = True
     reference: str | None = Field(default=None, max_length=80)
@@ -125,6 +132,11 @@ def applied_states(body: AppliedStatesRequest, svc: ApplicationService = Depends
     return svc.applied_states([j for j in body.job_ids if isinstance(j, str) and len(j) == 32])
 
 
+@router.get("/autofill/{job_id}", summary="Values to fill an application form in your own browser (verified data only; never submits)")
+def autofill(job_id: JobId, svc: ApplicationService = Depends(get_application_service)):
+    return _guard(lambda: svc.autofill(job_id))
+
+
 @router.get("", summary="List applications")
 def list_applications(state: str | None = None, job_id: str | None = Query(default=None, pattern=HEX32), source: str | None = Query(default=None, max_length=40),
                       limit: int = Query(default=100, ge=1, le=500), skip: int = Query(default=0, ge=0),
@@ -135,8 +147,73 @@ def list_applications(state: str | None = None, job_id: str | None = Query(defau
 @router.get("/page", summary="Paged, searchable list: {total, items}")
 def page_applications(state: str | None = Query(default=None, max_length=40), states: list[str] | None = Query(default=None, max_length=12), q: str | None = Query(default=None, max_length=100), source: str | None = Query(default=None, max_length=40),
                       date_from: datetime | None = None, date_to: datetime | None = None, dismissed: bool | None = None,
+                      employer_outcome: str | None = Query(default=None, pattern=r"^(rejected|none)$"),
                       limit: int = Query(default=25, ge=1, le=200), skip: int = Query(default=0, ge=0), svc: ApplicationService = Depends(get_application_service)):
-    return svc.page(state=state, states=states, q=q, source=source, date_from=date_from, date_to=date_to, dismissed=dismissed, limit=limit, skip=skip)
+    return svc.page(state=state, states=states, q=q, source=source, date_from=date_from, date_to=date_to, dismissed=dismissed, employer_outcome=employer_outcome,
+                    limit=limit, skip=skip)
+
+
+# ---- rejection tracking (replies in your own Gmail that say "not selected") ----------------------------------------
+SignalId = Annotated[str, Path(pattern=HEX32, description="32-character hex id of a rejection e-mail record")]
+
+
+def get_rejection_service(svc: ApplicationService = Depends(get_application_service), settings: Settings = Depends(get_settings)) -> RejectionService:
+    return RejectionService(svc.apps.col.database, settings)
+
+
+def _rguard(fn):
+    try:
+        return fn()
+    except RejectionNotFound as exc:
+        raise HTTPException(404, str(exc)) from None
+    except RejectionNotAllowed as exc:
+        raise HTTPException(409, {"code": "not_allowed", "message": str(exc)}) from None
+
+
+@router.get("/rejections", summary="Rejection e-mails found in your Gmail: to confirm, unmatched, recently applied; last check")
+def rejections(svc: RejectionService = Depends(get_rejection_service)):
+    return svc.overview()
+
+
+@router.post("/rejections/check", dependencies=[Depends(require_admin_if_configured)], summary="Check Gmail for rejection e-mails now (read-only)")
+def check_rejections(svc: RejectionService = Depends(get_rejection_service)):
+    return svc.scan(trigger="manual")
+
+
+@router.post("/rejections/{signal_id}/confirm", summary="Yes: this rejection e-mail is about that application (marks it rejected)")
+def confirm_rejection(body: RejectionConfirmRequest, signal_id: SignalId, svc: RejectionService = Depends(get_rejection_service)):
+    return _rguard(lambda: svc.confirm(signal_id, body.application_id))
+
+
+@router.post("/rejections/{signal_id}/add-as-applied", summary="You applied to this job outside JobPilot: add it to Applied Jobs and mark it rejected")
+def add_rejection_as_applied(signal_id: SignalId, svc: RejectionService = Depends(get_rejection_service),
+                             apps: ApplicationService = Depends(get_application_service), discovery: DiscoveryService = Depends(get_discovery_service)):
+    def import_job(fields: dict, source: str | None) -> dict | None:
+        try:
+            return discovery.import_job(None, fields, source).get("job")
+        except ValueError as exc:
+            raise RejectionNotAllowed(f"The job could not be added: {exc}") from None
+    def record_applied(job_id: str, notes: str) -> dict:
+        rec = apps.record_applied_yourself(job_id)          # no note here: a note would count as evidence and mark it VERIFIED
+        if not rec.get("user_notes"):
+            apps.set_notes(rec["application_id"], notes)
+        return rec
+    return _rguard(lambda: _guard(lambda: svc.add_as_applied(signal_id, import_job=import_job, record_applied=record_applied)))
+
+
+@router.post("/rejections/{signal_id}/dismiss", summary="No: this e-mail is not about any of my applications")
+def dismiss_rejection(signal_id: SignalId, svc: RejectionService = Depends(get_rejection_service)):
+    return _rguard(lambda: svc.dismiss(signal_id))
+
+
+@router.post("/{application_id}/employer-rejected", summary="Mark that the employer rejected this application (your own record)")
+def mark_employer_rejected(application_id: AppId, svc: RejectionService = Depends(get_rejection_service)):
+    return _rguard(lambda: svc.mark_rejected(application_id))
+
+
+@router.post("/{application_id}/employer-rejected/undo", summary="Remove the 'rejected by employer' mark (wrong match or mistake)")
+def undo_employer_rejected(application_id: AppId, svc: RejectionService = Depends(get_rejection_service)):
+    return _rguard(lambda: svc.undo(application_id))
 
 
 @router.get("/policy/{job_id}", summary="May this job's application be automated? (policy decision + apply link)")

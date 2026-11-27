@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from backend.services.matching_service import JobNotFound, NoActiveResume, ProfileMissing, UnreviewedProfile
 from config.automation_config import ADJUSTABLE
 from config.settings import Settings, get_settings
+from config.tenant import Tenant, current_tenant
 from database.connection import DatabaseManager, get_database_manager
 from database.repositories.queue_repository import ALL_STATUSES
 from scheduler.application_queue import NotQueueable
@@ -23,21 +24,28 @@ queue_router = APIRouter(prefix="/api/queue", tags=["queue"])
 scheduler_router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
 notifications_router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 reports_router = APIRouter(prefix="/api/reports", tags=["reports"])
-_holder: dict = {"rt": None}
+_holder: dict[str, Runtime] = {}          # one scheduler per person ("owner" or the user id): each works only on that person's database
 _lock = threading.Lock()
 
 
+def runtime_key(tenant: Tenant | None = None) -> str:
+    t = tenant if tenant is not None else current_tenant.get()
+    return "owner" if t is None or t.is_owner else t.user_id
+
+
 def get_runtime(manager: DatabaseManager = Depends(get_database_manager), settings: Settings = Depends(get_settings)) -> Runtime:
+    key = runtime_key()
     with _lock:
-        if _holder["rt"] is None:
-            _holder["rt"] = build_runtime(manager.get_database(), settings)
-        return _holder["rt"]
+        if key not in _holder:
+            _holder[key] = build_runtime(manager.get_database(), settings)      # the signed-in person's own database and settings
+        return _holder[key]
 
 
 def reset_runtime() -> None:
     with _lock:
-        rt, _holder["rt"] = _holder["rt"], None
-    if rt is not None:
+        rts = list(_holder.values())
+        _holder.clear()
+    for rt in rts:
         rt.scheduler.shutdown()
 
 
@@ -52,17 +60,35 @@ def require_admin(x_admin_token: Annotated[str | None, Header()] = None, setting
 admin = Depends(require_admin)
 
 
-def start_if_enabled(db, settings: Settings) -> None:
-    """Called at startup: resume the scheduler if you started it before (persisted) or opted in with SCHEDULER_AUTOSTART."""
+def start_if_enabled(db, settings: Settings, key: str = "owner") -> None:
+    """Called at startup: resume the scheduler if you started it before (persisted) or opted in with SCHEDULER_AUTOSTART (owner only)."""
     try:
         rt = build_runtime(db, settings)
-        if settings.scheduler_autostart or rt.sched_repo.get_state().get("enabled"):
+        if (key == "owner" and settings.scheduler_autostart) or rt.sched_repo.get_state().get("enabled"):
             with _lock:
-                _holder["rt"] = rt
+                _holder[key] = rt
             rt.scheduler.start()
             logger.info("Scheduler resumed after startup")
     except Exception as exc:  # noqa: BLE001 - the API must come up even if the scheduler cannot
         logger.error("Scheduler could not be started: %s", type(exc).__name__)
+
+
+def start_all_enabled(manager: DatabaseManager, owner_settings: Settings | None = None) -> None:
+    """Startup / after a settings change: resume the owner's scheduler and every other person's that was running."""
+    from backend.services.auth_service import ACCOUNTS
+    from config.settings import base_settings
+    base = base_settings()
+    owner_db = manager.base_database() if hasattr(manager, "base_database") else manager.get_database()
+    start_if_enabled(owner_db, owner_settings or base, "owner")
+    if not base.auth_enabled:
+        return
+    for acc in owner_db[ACCOUNTS].find({"role": "user"}, {"_id": 0, "user_id": 1, "name": 1, "role": 1}):
+        tenant = Tenant(user_id=acc["user_id"], name=acc["name"], role=acc["role"])
+        token = current_tenant.set(tenant)
+        try:
+            start_if_enabled(manager.get_database(), get_settings(), tenant.user_id)
+        finally:
+            current_tenant.reset(token)
 
 
 # ---------------------------------------------------------------------------------------------------- scheduler

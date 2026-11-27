@@ -9,6 +9,28 @@ export const TAB_STATES: Record<OverviewTab, string[] | null> = {
   "Manual handoff": ["MANUAL_HANDOFF_REQUIRED"],
   "Failed / needs verification": ["SUBMISSION_FAILED", "VERIFICATION_PENDING"],
 };
+/** Jobs whose title, company or label contain every word typed (any order, any case). An empty search returns the list unchanged. */
+export function searchJobs<T extends { job_title?: string | null; company_name?: string | null }>(jobs: T[], query: string, labelOf: (j: T) => string = () => ""): T[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return jobs;
+  return jobs.filter((j) => {
+    const hay = `${j.job_title ?? ""} ${j.company_name ?? ""} ${labelOf(j)}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+}
+
+/** What each tab is for, shown when it is empty - so an empty tab explains itself instead of a bare "nothing here". */
+export const TAB_EMPTY: Record<OverviewTab, string> = {
+  "Needs your action": "Nothing needs you right now. Prepared applications, missing answers, jobs to apply to yourself and failed or unclear submissions all show up here first.",
+  "Awaiting review / approval": "No prepared application is waiting for your OK. After the morning job search, good matches (eligible and score at or above your rule) are prepared and appear here.",
+  "Queued & processing": "Nothing is queued. The daily job search puts good matches in the queue; the background worker then prepares them (it never submits).",
+  "Manual handoff": "No job is waiting for you to apply yourself. Jobs on sites that cannot be automated (LinkedIn, Naukri, most company forms) land here with their documents and link.",
+  "Failed / needs verification": "Nothing failed and nothing needs checking.",
+};
+export const tabLabel = (tab: string, count: number | null | undefined): string => (count == null ? tab : `${tab} (${count})`);
+/** Queue tasks that count as "queued & processing" (the same filter the queue tab uses). */
+export const activeTasks = <T extends { status?: string }>(tasks: T[] | null | undefined): T[] => (tasks ?? []).filter((t) => ["queued", "processing", "paused"].includes(t.status ?? ""));
+
 /** The API takes repeated ?states=A&states=B parameters (api.ts joins arrays, so the query is built here). */
 export function applicationsPagePath(states: string[], limit = 25): string {
   return `/api/applications/page?${states.map((s) => `states=${encodeURIComponent(s)}`).join("&")}&dismissed=false&limit=${limit}`;

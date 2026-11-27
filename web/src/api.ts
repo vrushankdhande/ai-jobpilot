@@ -48,10 +48,11 @@ export async function call<T = any>(method: string, path: string, opts: CallOpti
   const timer = setTimeout(() => ctl.abort(), opts.timeoutMs ?? 90_000);
   opts.signal?.addEventListener("abort", () => ctl.abort());
   try {
-    const resp = await fetch(path + queryString(opts.params), { method, headers, body, signal: ctl.signal, credentials: "omit" });
+    const resp = await fetch(path + queryString(opts.params), { method, headers, body, signal: ctl.signal, credentials: "same-origin" });   // only the HttpOnly sign-in cookie (scripts cannot read it)
     if (resp.status >= 400) {
       let e = { message: "Request failed", problems: [] as string[], detail: null as Record<string, any> | null };
       try { e = explain((await resp.json())?.detail); } catch { /* not JSON: keep the generic message */ }
+      if (resp.status === 401 && e.detail?.code === "login_required" && typeof window !== "undefined") window.dispatchEvent(new Event("jobpilot:login-required"));   // signed out / session expired: show the sign-in page
       return { ok: false, error: `${e.message} (HTTP ${resp.status})`, status: resp.status, problems: e.problems, detail: e.detail };
     }
     const type = resp.headers.get("content-type") ?? "";

@@ -1,7 +1,6 @@
-import { useMemo, useState, type ClipboardEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ClipboardEvent } from "react";
 import { api } from "../api";
 import { buildImportBody, importMessage } from "../lib/discovery";
-import { suggestTitle } from "../lib/linkedin";
 import { naukriLinksFor, naukriLinksFromHtml, naukriSearchUrl, parseNaukriJobUrl, parseNaukriResults, type NaukriLink, type PastedNaukriJob } from "../lib/naukri";
 import { Alert, DataTable, Field } from "./ui";
 
@@ -14,9 +13,9 @@ export function NaukriSearch() {
   const exp = years.trim() === "" ? null : Number(years);
   const url = useMemo(() => naukriSearchUrl({ keywords, location, experienceYears: exp, postedWithin: posted }), [keywords, location, exp, posted]);
   return (
-    <details open>
-      <summary>🔗 Search on Naukri (opens Naukri in a new tab)</summary>
-      <p className="muted">Naukri does not allow automated collection, so JobPilot never contacts it. This only builds the search link; you open the jobs yourself, then copy a job you like into the quick import below. Naukri may ignore a filter - set it on its own page if so.</p>
+    <details>
+      <summary>1. 🔗 Open the Naukri search</summary>
+      <p className="muted">Opens Naukri in a new tab with your search filled in. Then copy the results page into box 2. (Naukri may ignore a filter - set it on its own page if so.)</p>
       <div className="grid cols-3">
         <Field label="Naukri keywords"><input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="e.g. AI engineer" /></Field>
         <Field label="Naukri location"><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Pune" /></Field>
@@ -35,53 +34,6 @@ export function NaukriSearch() {
   );
 }
 
-/** Quick import of a job the user copied from Naukri: reads the job id from the pasted link and imports through the normal manual-import API. Nothing is fetched. */
-export function NaukriQuickImport({ onDone }: { onDone: () => void }) {
-  const blank = { link: "", text: "", title: "", company: "", loc: "" };
-  const [v, setV] = useState(blank);
-  const [titleTouched, setTitleTouched] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const ref = useMemo(() => parseNaukriJobUrl(v.link), [v.link]);
-  const ready = Boolean(ref && v.title.trim() && v.company.trim() && v.text.trim().length >= 50);
-
-  function onText(text: string) {
-    setV({ ...v, text, title: titleTouched || v.title ? v.title : suggestTitle(text) });
-  }
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!ref || !ready) return;
-    setBusy(true); setMsg(null);
-    const res = await api.post("/api/jobs/import", { json: buildImportBody(ref.canonicalUrl, { job_title: v.title.trim(), company_name: v.company.trim(), location: v.loc.trim(), job_description: v.text.trim() }) });
-    setBusy(false);
-    if (!res.ok) { setMsg({ ok: false, text: res.error ?? "Failed" }); return; }
-    setMsg({ ok: true, text: importMessage(res.data.action, res.data.match) });
-    setV(blank); setTitleTouched(false);
-    onDone();
-  }
-  return (
-    <details open>
-      <summary>⚡ Quick import from Naukri (paste)</summary>
-      <p className="muted">On the Naukri job page, copy the link and the job text, paste them here, and check the title and company. The link is stored for reference (without tracking parameters) and is never opened or fetched by this app.</p>
-      <form onSubmit={submit} aria-label="Quick import from Naukri">
-        <Field label="Naukri job link"><input value={v.link} onChange={(e) => setV({ ...v, link: e.target.value })} placeholder="https://www.naukri.com/job-listings-…" /></Field>
-        {v.link.trim() !== "" && (ref
-          ? <div className="muted" role="status">✅ Naukri job <b>{ref.jobId}</b> - stored as {ref.canonicalUrl}</div>
-          : <Alert kind="warning">That does not look like a Naukri job link. Open the job itself on Naukri and copy its address (it contains <code>/job-listings-</code>).</Alert>)}
-        <Field label="Paste the Naukri job text (title, company, description…)"><textarea style={{ minHeight: 160 }} value={v.text} onChange={(e) => onText(e.target.value)} /></Field>
-        <div className="grid cols-3">
-          <Field label={`Naukri job title *${v.title && !titleTouched ? " (suggested - check it)" : ""}`}><input value={v.title} onChange={(e) => { setTitleTouched(true); setV({ ...v, title: e.target.value }); }} /></Field>
-          <Field label="Naukri company *"><input value={v.company} onChange={(e) => setV({ ...v, company: e.target.value })} /></Field>
-          <Field label="Naukri job location"><input value={v.loc} onChange={(e) => setV({ ...v, loc: e.target.value })} /></Field>
-        </div>
-        <button type="submit" className="primary" disabled={!ready || busy}>Import Naukri job</button>
-        {!ready && <span className="muted"> Needs a Naukri job link, a title, a company and at least 50 characters of job text.</span>}
-      </form>
-      {msg && <Alert kind={msg.ok ? "success" : "error"}>{msg.text}</Alert>}
-    </details>
-  );
-}
-
 type Row = PastedNaukriJob & { pick: boolean; link: string; result?: string };
 
 /** Bulk paste: the user copies a whole Naukri results page themselves (Ctrl+A, Ctrl+C) and pastes it here. The text is split into jobs in the
@@ -93,12 +45,14 @@ export function NaukriBulkPaste({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
 
-  function read() {
+  // the jobs are read as soon as something is pasted - no extra button
+  useEffect(() => {
     setSummary(null);
+    if (!text.trim()) { setRows([]); return; }
     const jobs = parseNaukriResults(text);
     const found = naukriLinksFor(jobs, links);
     setRows(jobs.map((j, i) => ({ ...j, pick: true, link: found[i] ?? "" })));
-  }
+  }, [text, links]);
   function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
     setLinks(naukriLinksFromHtml(e.clipboardData.getData("text/html") ?? ""));   // the job links that came with the copy; the text is pasted as usual
   }
@@ -126,14 +80,13 @@ export function NaukriBulkPaste({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <details open>
-      <summary>📋 Bulk paste from a Naukri results page</summary>
-      <p className="muted">Open your search on Naukri, press <b>Ctrl+A</b> then <b>Ctrl+C</b> on the results page, and paste it here. JobPilot only splits the text you copied into jobs - it never opens or reads Naukri.
-        The job links that come with your copy are filled in automatically. A results page shows a short summary per job, so scores are rougher than with the full description.</p>
+    <details>
+      <summary>2. 📋 Paste the Naukri results here</summary>
+      <p className="muted">On the Naukri results page press <b>Ctrl+A</b>, then <b>Ctrl+C</b>, and paste here (<b>Ctrl+V</b>). The jobs and their links are read automatically - then press Import.
+        JobPilot never opens Naukri itself. A results page has only a short summary per job, so scores are rougher than with the full description.</p>
       <Field label="Paste the copied Naukri results page"><textarea style={{ minHeight: 140 }} value={text} onPaste={onPaste} onChange={(e) => setText(e.target.value)} /></Field>
       {text.trim() !== "" && <div className="muted" role="status">{links.length ? `🔗 ${links.length} job link(s) found in what you copied - they are filled in for you.` : "No job links came with the paste - you can add a job's link by hand."}</div>}
-      <button type="button" onClick={read} disabled={!text.trim() || busy}>Read jobs from the pasted text</button>
-      {rows.length === 0 && text.trim() !== "" && summary === null && <span className="muted"> Press the button to see the jobs found in the text.</span>}
+      {rows.length === 0 && text.trim() !== "" && <Alert kind="warning">No jobs found in what you pasted. Copy the whole Naukri <b>results</b> page (Ctrl+A, Ctrl+C) and paste again.</Alert>}
       {rows.length > 0 && (
         <>
           <p><b>{rows.length}</b> job(s) found. Untick any you do not want, check titles and companies, then import.</p>

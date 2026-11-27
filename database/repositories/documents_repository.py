@@ -45,7 +45,7 @@ class DocumentsRepository:
             if val:
                 match[key] = val
         if not latest_only:
-            return list(self._docs.find(match, _LIST_PROJECTION).sort("generated_at", DESCENDING).skip(skip).limit(limit))
+            return list(self._docs.find(match, _LIST_PROJECTION).sort([("generated_at", DESCENDING), ("document_id", ASCENDING)]).skip(skip).limit(limit))
         pipeline = [{"$match": match}, {"$sort": {"version": -1}}, {"$group": {"_id": "$group_id", "doc": {"$first": "$$ROOT"}}},
                     {"$replaceRoot": {"newRoot": "$doc"}}, {"$project": {"_id": 0, "content": 0}},
                     {"$sort": {"generated_at": -1}}, {"$skip": skip}, {"$limit": limit}]

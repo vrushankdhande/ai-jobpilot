@@ -6,14 +6,15 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pymongo.errors import AutoReconnect, ConnectionFailure, PyMongoError
 
-from backend.api.routes import applications, documents, health, jobs, matching, resumes
+from backend.api.routes import applications, auth as auth_routes, documents, health, jobs, matching, resumes
 from backend.api.routes import analytics as analytics_routes, interviews, settings as settings_routes
 from backend.api.routes import scheduler as scheduler_routes
-from backend.api.security import hardening_middleware
+from backend.api.security import auth_middleware, hardening_middleware
 from backend.core.config import get_settings
 from backend.core.database import DatabaseConnectionError, database_manager
 from backend.core.logging_config import setup_logging
 from config.production_checks import production_problems
+from backend.services.auth_service import ensure_auth_indexes
 from database.indexes import ensure_indexes
 
 logger = logging.getLogger(__name__)
@@ -40,9 +41,10 @@ async def lifespan(app: FastAPI):
     else:
         try:
             ensure_indexes(database_manager.get_database())
+            ensure_auth_indexes(database_manager.base_database())
         except Exception:
             logger.exception("Could not ensure MongoDB indexes")
-        scheduler_routes.start_if_enabled(database_manager.get_database(), settings)
+        scheduler_routes.start_all_enabled(database_manager)
     yield
     scheduler_routes.reset_runtime()
     database_manager.close()
@@ -61,8 +63,10 @@ def create_app() -> FastAPI:
         openapi_url=None if production else "/openapi.json",
         lifespan=lifespan,
     )
-    app.middleware("http")(hardening_middleware)
+    app.middleware("http")(auth_middleware)
+    app.middleware("http")(hardening_middleware)       # added last = runs first (size limit and headers also on 401s)
     app.include_router(health.router)
+    app.include_router(auth_routes.router)
     app.include_router(resumes.router)
     app.include_router(matching.router)
     app.include_router(jobs.router)

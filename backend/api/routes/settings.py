@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 from backend.api.routes import scheduler as sched_routes
 from backend.api.routes.scheduler import require_admin
+from backend.api.security import require_owner
 from backend.services.settings_service import SettingsError, SettingsService
 from config.settings import Settings, get_settings
 from database.connection import DatabaseManager, get_database_manager
@@ -57,20 +58,20 @@ def save_preferences(body: PreferencesBody, svc: SettingsService = Depends(get_s
     return _guard(lambda: svc.update_preferences(body.values))
 
 
-@router.put("/scoring", dependencies=[Depends(require_admin)], summary="Save matching weights and thresholds (bumps scoring_version)")
+@router.put("/scoring", dependencies=[Depends(require_owner), Depends(require_admin)], summary="Save matching weights and thresholds (bumps scoring_version)")
 def save_scoring(body: ScoringBody, svc: SettingsService = Depends(get_settings_service)):
     return _guard(lambda: svc.update_scoring(body.model_dump(exclude_none=True)))
 
 
-@router.put("/automation", dependencies=[Depends(require_admin)], summary="Save automation caps, scheduler times and retry settings (config/automation_limits.yaml)")
+@router.put("/automation", dependencies=[Depends(require_owner), Depends(require_admin)], summary="Save automation caps, scheduler times and retry settings (config/automation_limits.yaml)")
 def save_automation(body: ValuesBody, svc: SettingsService = Depends(get_settings_service), manager: DatabaseManager = Depends(get_database_manager),
                     settings: Settings = Depends(get_settings)):
     out = _guard(lambda: svc.update_automation(body.values))
-    sched_routes.reset_runtime()                                   # rebuilt lazily with the new values
-    sched_routes.start_if_enabled(manager.get_database(), settings)  # and resumed if it was running
+    sched_routes.reset_runtime()                                   # everyone's scheduler is rebuilt lazily with the new values
+    sched_routes.start_all_enabled(manager, settings if sched_routes.runtime_key() == "owner" else None)   # and resumed if it was running
     return out
 
 
-@router.put("/env", dependencies=[Depends(require_admin)], summary="Save non-secret environment settings (restart required)")
+@router.put("/env", dependencies=[Depends(require_owner), Depends(require_admin)], summary="Save non-secret environment settings (restart required)")
 def save_env(body: ValuesBody, svc: SettingsService = Depends(get_settings_service)):
     return _guard(lambda: svc.update_env(body.values))

@@ -48,7 +48,7 @@ describe("AppliedJobs page", () => {
   it("shows a clear error when the backend is unreachable", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("network"); }));
     render(<AppliedJobs />);
-    expect(await screen.findByText(/Backend unreachable/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Backend unreachable/)).length).toBeGreaterThan(0);
   });
 
   it("asks for the default 'applied' states and hides rejected applications", async () => {

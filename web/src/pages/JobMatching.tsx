@@ -44,24 +44,28 @@ function Body({ cfg, active, profile, report, setReport, allowUnreviewed, setAll
   const missing: string[] = profile.missing_fields ?? [];
   return (
     <>
-      <h2>A. Candidate profile</h2>
-      <div className="grid cols-4">
-        <Metric label="Active resume" value={String(active.original_filename).slice(0, 28)} />
-        <Metric label="Review status" value={String(profile.review_status).replaceAll("_", " ")} />
-        <Metric label="Profile version" value={profile.profile_version} />
-        <Metric label="Completeness" value={pct(completeness(missing.length))} help="Share of the 18 key profile fields that are filled in" />
-      </div>
+      {/* A and B are folded away by default: most jobs arrive already scored (list below); open them to check a job you found yourself */}
+      <details className="fold">
+        <summary><h2>A. Candidate profile</h2></summary>
+        <div className="grid cols-4">
+          <Metric label="Active resume" value={String(active.original_filename).slice(0, 28)} />
+          <Metric label="Review status" value={String(profile.review_status).replaceAll("_", " ")} />
+          <Metric label="Profile version" value={profile.profile_version} />
+          <Metric label="Completeness" value={pct(completeness(missing.length))} help="Share of the 18 key profile fields that are filled in" />
+        </div>
+        {missing.length > 0 && <details><summary>Missing profile information ({missing.length})</summary>{missing.join(", ")}</details>}
+        <p className="muted">Scoring version <b>{cfg.scoring_version}</b> · recommendation threshold <b>{g(cfg.recommendation_threshold)}</b> · {ai.enabled ? "🤖 Claude analysis available" : `⚙️ Deterministic mode (${ai.reason})`}</p>
+      </details>
       {!reviewed && (
         <>
           <Alert kind="warning">This profile has <b>not been reviewed</b>. Matching uses the candidate&apos;s verified data - review and correct it in Resume Manager first. You can still run a match on the unreviewed profile after confirming below.</Alert>
           <Check label="I understand and want to match against the unreviewed profile" checked={allowUnreviewed} onChange={setAllowUnreviewed} />
         </>
       )}
-      {missing.length > 0 && <details><summary>Missing profile information ({missing.length})</summary>{missing.join(", ")}</details>}
-      <p className="muted">Scoring version <b>{cfg.scoring_version}</b> · recommendation threshold <b>{g(cfg.recommendation_threshold)}</b> · {ai.enabled ? "🤖 Claude analysis available" : `⚙️ Deterministic mode (${ai.reason})`}</p>
-
-      <h2>B. Job description</h2>
-      <JobForm ai={ai} canRun={reviewed || allowUnreviewed} allowUnreviewed={allowUnreviewed} onReport={(r) => { setFromTable(false); setReport(r); }} />
+      <details className="fold">
+        <summary><h2>B. Job description</h2> <span className="muted">· paste a job you found yourself to score it</span></summary>
+        <JobForm ai={ai} canRun={reviewed || allowUnreviewed} allowUnreviewed={allowUnreviewed} onReport={(r) => { setFromTable(false); setReport(r); }} />
+      </details>
 
       {/* A report opened from the results table is shown UNDER the table, so the page does not jump away from the row you clicked. */}
       {!fromTable && <div id="match-report">{report && <Results rep={report} threshold={cfg.recommendation_threshold} allowUnreviewed={allowUnreviewed} onReport={setReport} />}</div>}

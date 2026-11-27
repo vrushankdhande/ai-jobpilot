@@ -20,6 +20,8 @@ storage/screenshots/*
 !storage/**/.gitkeep
 storage/notifications/*
 storage/browser_sessions/*
+# every other person's own data (resumes, documents, Gmail authorisation, preferences)
+storage/users/
 !storage/**/.gitkeep
 
 # backups contain personal data

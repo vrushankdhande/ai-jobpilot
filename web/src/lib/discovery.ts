@@ -1,6 +1,6 @@
 // Pure logic for the Job Discovery page (port of the helpers in frontend/pages/02_job_discovery.py). No React; unit-tested.
 export const STATUS_ICON: Record<string, string> = { ENABLED: "✅", MANUAL_ONLY: "✋", DISABLED: "⛔", PENDING_POLICY_REVIEW: "⏳" };
-export const SOURCE_LABEL: Record<string, string> = { career_pages: "Company career pages", linkedin: "LinkedIn", indeed: "Indeed", naukri: "Naukri", instahyre: "Instahyre", manual: "Manual entry", email_alerts: "Job-alert e-mails (Gmail)" };
+export const SOURCE_LABEL: Record<string, string> = { career_pages: "Company career pages", linkedin: "LinkedIn", indeed: "Indeed", naukri: "Naukri", instahyre: "Instahyre", glassdoor: "Glassdoor", manual: "Manual entry", email_alerts: "Job-alert e-mails (Gmail)" };
 export const sourceLabel = (s: string): string => SOURCE_LABEL[s] ?? s;
 
 export const WORK_MODES = ["remote", "hybrid", "onsite"];
@@ -121,4 +121,72 @@ export const importMessage = (action: string, match?: { match_score: number; eli
 /** Only non-empty fields are sent for a manual import. */
 export function buildImportBody(url: string, job: Record<string, string>) {
   return { url: url || null, job: Object.fromEntries(Object.entries(job).filter(([, v]) => v)) };
+}
+
+// ---- the Discover jobs form is remembered in this browser (a convenience only; nothing secret is stored) ----
+const DISCOVER_KEY = "jobpilot.discoverForm.v1";
+type Store = Pick<Storage, "getItem" | "setItem">;
+const browserStore = (): Store | null => { try { return typeof localStorage !== "undefined" ? localStorage : null; } catch { return null; } };
+
+/** The saved form merged over the defaults; sources that are no longer runnable are dropped. Anything unreadable -> the defaults. */
+export function loadDiscoverForm(defaults: DiscoverForm, runnable: string[], store: Store | null = browserStore()): DiscoverForm {
+  try {
+    const raw = store?.getItem(DISCOVER_KEY);
+    if (!raw) return defaults;
+    const saved = JSON.parse(raw) as Partial<DiscoverForm>;
+    const merged: DiscoverForm = { ...defaults };
+    for (const k of Object.keys(defaults) as Array<keyof DiscoverForm>) {
+      const v = saved[k];
+      if (v !== undefined && typeof v === typeof defaults[k] && Array.isArray(v) === Array.isArray(defaults[k])) (merged as any)[k] = v;
+    }
+    const kept = merged.sources.filter((s) => runnable.includes(s));
+    merged.sources = kept.length ? kept : defaults.sources;
+    return merged;
+  } catch {
+    return defaults;
+  }
+}
+
+export function saveDiscoverForm(f: DiscoverForm, store: Store | null = browserStore()): void {
+  try { store?.setItem(DISCOVER_KEY, JSON.stringify(f)); } catch { /* storage blocked: the form still works, it just is not remembered */ }
+}
+
+// ---- recent searches (this browser): what was searched, when, and what it found ----
+const HISTORY_KEY = "jobpilot.discoverHistory.v1";
+export interface SearchHistoryEntry { at: string; form: DiscoverForm; status: string; found: number | null; fetched: number | null }
+export const MAX_HISTORY = 15;
+
+export function loadSearchHistory(store: Store | null = browserStore()): SearchHistoryEntry[] {
+  try {
+    const raw = store?.getItem(HISTORY_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((e) => e && typeof e.at === "string" && e.form && typeof e.form === "object").slice(0, MAX_HISTORY) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Adds a finished search at the top. The same search run again replaces its older entry (newest result kept). */
+export function addSearchHistory(entry: SearchHistoryEntry, store: Store | null = browserStore()): SearchHistoryEntry[] {
+  const same = (a: DiscoverForm, b: DiscoverForm) => JSON.stringify(a) === JSON.stringify(b);
+  const list = [entry, ...loadSearchHistory(store).filter((e) => !same(e.form, entry.form))].slice(0, MAX_HISTORY);
+  try { store?.setItem(HISTORY_KEY, JSON.stringify(list)); } catch { /* storage blocked: history is just not kept */ }
+  return list;
+}
+
+export function clearSearchHistory(store: Store | null = browserStore()): void {
+  try { store?.setItem(HISTORY_KEY, "[]"); } catch { /* ignore */ }
+}
+
+/** One line describing what a search looked for. */
+export function describeSearch(f: DiscoverForm): string {
+  const lines = (t: string) => t.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
+  const parts = [
+    lines(f.titles).length ? lines(f.titles).join(", ") : f.usePrefs ? "your saved preferences" : "all titles",
+    lines(f.locations).length ? `in ${lines(f.locations).join(", ")}` : "",
+    lines(f.skills).length ? `skills: ${lines(f.skills).join(", ")}` : "",
+    lines(f.companies).length ? `at ${lines(f.companies).join(", ")}` : "",
+    f.modes.length ? f.modes.join("/") : "", f.postedDays ? `last ${f.postedDays} days` : "", f.expMax ? `≤ ${f.expMax} yrs` : "",
+  ].filter(Boolean);
+  return parts.join(" · ");
 }

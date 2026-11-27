@@ -284,7 +284,10 @@ def _dedupe(items: list[str]) -> list[str]:
 # Contact
 # --------------------------------------------------------------------------
 def _norm_url(u: str) -> str:
-    u = u.strip().rstrip("/.,;")
+    u = u.strip()
+    while u.endswith(")") and u.count(")") > u.count("("):   # "Portfolio (https://x.io/)": the bracket belongs to the text, not the address
+        u = u[:-1]
+    u = u.rstrip("/.,;")
     return u if u.lower().startswith("http") else "https://" + u
 
 

@@ -13,7 +13,7 @@ from ai.schemas.job_schema import JobInput
 from backend.api.routes.applications import get_application_service
 from backend.api.routes.documents import get_document_service
 from backend.main import app
-from backend.services.application_service import ApplicationService
+from backend.services.application_service import ActionNotAllowed, ApplicationService
 from backend.services.document_service import DocumentService
 from browser.screenshot_manager import ScreenshotManager
 from browser.session_manager import SessionManager
@@ -532,3 +532,51 @@ def test_undo_is_refused_for_verified_or_jobpilot_submitted_applications(env):
     assert env.service.applied_states([jid2]) == {jid2: "SUBMITTED"}
     with pytest.raises(ApplicationNotFound):
         env.service.undo_recorded_applied("0" * 32)
+
+
+# =============================================================================================== autofill (candidate's own browser)
+def test_autofill_gives_verified_details_and_approved_texts_only_and_creates_or_sends_nothing(env, ready):
+    jid, docs = ready
+    before_apps = env.apps.count()
+    data = env.service.autofill(jid)
+    f = {x["key"]: x for x in data["fields"]}
+    c = env.profile.contact
+    assert f["email"]["value"] == c.email and f["full_name"]["value"] == c.full_name
+    assert (f["phone"]["value"] == c.phone) if c.phone else ("phone" not in f and "Phone" in data["missing"])          # absent = listed, never invented
+    assert f["first_name"]["derived"] is True                                                    # split from the full name: the candidate checks it
+    assert f["cover_letter_text"]["value"].strip()                                               # from the APPROVED cover letter
+    assert f["notice_period"]["value"] == "30 days" and f["salary_expectation"]["value"] == "INR 3,000,000 per year"   # typed by the candidate
+    assert data["answers"] and all(a["answer"].strip() and "[" not in a["answer"][:2] for a in data["answers"])        # no needs-input placeholders
+    assert data["job"]["company"] == "Northwind AI"
+    assert env.apps.count() == before_apps and env.server.posts == []                             # read-only: no application, nothing sent
+
+
+def test_autofill_without_approved_documents_still_gives_the_profile_and_lists_what_is_missing(env):
+    jid = add_job(env, "/apply", title="Role without documents")
+    data = env.service.autofill(jid)
+    keys = {x["key"] for x in data["fields"]}
+    assert "email" in keys and "cover_letter_text" not in keys and data["answers"] == []
+    assert "Cover letter" in data["missing"] and "Expected salary" in data["missing"]             # said, never invented
+    app.dependency_overrides[get_application_service] = lambda: env.service
+    try:
+        c = TestClient(app)
+        assert c.get(f"/api/applications/autofill/{jid}").status_code == 200
+        assert c.get("/api/applications/autofill/not-a-job-id").status_code == 422
+        assert c.get(f"/api/applications/autofill/{'f' * 32}").status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_applied_switch_works_for_a_job_from_an_alert_e_mail_without_a_description(env):
+    # what an alert e-mail stores: link, title, company - no description (it cannot be scored)
+    jid = env.db["jobs"].insert_one({"job_id": "c" * 32, "content_hash": "alert-1", "source": "naukri", "job_title": "AI Engineer", "company_name": "Valuelabs",
+                                    "company_key": "valuelabs", "title_key": "ai engineer", "job_description": None, "status": "active",
+                                    "job_url": "https://www.naukri.com/job-listings-ai-engineer-valuelabs-hyderabad-4-to-9-years-211126503161",
+                                    "source_refs": [{"source": "naukri", "provider": "gmail_alert", "source_job_id": "211126503161"}]}) and "c" * 32
+    with pytest.raises(ActionNotAllowed, match="no description yet"):
+        env.service.prepare(jid)                                                      # a full application needs the description
+    rec = env.service.record_applied_yourself(jid)                                    # but "I applied myself" is recorded
+    assert rec["state"] == "SUBMITTED" and rec["eligibility"] == "UNKNOWN" and rec["match_score"] is None
+    assert env.service.applied_states([jid]) == {jid: "SUBMITTED"} and env.db["job_matches"].count_documents({"job_id": jid}) == 0
+    assert env.service.undo_recorded_applied(jid)["state"] == "MANUAL_HANDOFF_REQUIRED"   # and the switch can be turned off again
+    assert env.server.posts == []

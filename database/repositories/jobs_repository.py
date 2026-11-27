@@ -127,11 +127,15 @@ class JobsRepository:
         return self._jobs.update_one({"job_id": job_id}, {"$set": fields}).matched_count == 1
 
     def touch_seen(self, job_id: str, ref: dict, now: datetime) -> None:
-        """Mark a source reference as seen again (no content change)."""
+        """Mark a source reference as seen again (no content change). The source's own values are refreshed too (e.g. the skills an alert
+        lists), as the update path does - the job's fields are not touched."""
+        fields = {"source_refs.$.last_seen_at": now, "status": "active"}
+        if ref.get("original"):
+            fields["source_refs.$.original"] = ref["original"]
         self._jobs.update_one(
             {"job_id": job_id, "source_refs": {"$elemMatch": {"source": ref["source"], "source_job_id": ref.get("source_job_id"),
                                                                "canonical_url": ref.get("canonical_url")}}},
-            {"$set": {"source_refs.$.last_seen_at": now, "status": "active"}})
+            {"$set": fields})
 
     def list_filtered(
         self, *, source: str | None = None, title: str | None = None, company: str | None = None, location: str | None = None,

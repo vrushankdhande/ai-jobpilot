@@ -12,8 +12,15 @@ from uuid import uuid4
 # .env, so pin the AI settings and ADMIN_TOKEN (tests assume "no token = read-only") BEFORE any settings object is created.
 # (AI paths are tested with scripted fake clients.)
 for _name, _value in (("AI_PROVIDER", "anthropic"), ("ANTHROPIC_API_KEY", ""), ("GEMINI_API_KEY", ""),
-                      ("AI_CONSENT_EXTERNAL_PROCESSING", "false"), ("AI_REFINE_JD", "true"), ("ADMIN_TOKEN", ""), ("AI_DOCUMENTS_CONSENT", "false"), ("AI_EXTRACTION_ENABLED", "false")):
+                      ("AI_CONSENT_EXTERNAL_PROCESSING", "false"), ("AI_REFINE_JD", "true"), ("ADMIN_TOKEN", ""), ("AI_DOCUMENTS_CONSENT", "false"), ("AI_EXTRACTION_ENABLED", "false"),
+                      ("AUTH_ENABLED", "false")):   # no login in the general tests; tests/integration/test_auth.py switches it on
     os.environ[_name] = _value
+# ...and never the developer's real Gmail authorisations (job-alert reading, notifications): tests point at files that do not exist
+import tempfile  # noqa: E402
+
+_NO_CREDS = tempfile.mkdtemp(prefix="jobpilot-test-creds-")
+os.environ["JOB_ALERT_CREDENTIALS_FILE"] = os.path.join(_NO_CREDS, "gmail_job_alerts.cred")
+os.environ["NOTIFICATION_CREDENTIALS_FILE"] = os.path.join(_NO_CREDS, "gmail.cred")
 
 import pytest
 from fastapi.testclient import TestClient

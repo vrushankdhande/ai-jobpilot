@@ -16,5 +16,5 @@ posted_within_days: 90       # skip postings older than this many days (jobs wit
 min_salary: null        # expected annual minimum
 salary_currency: null   # e.g. INR, USD
 work_authorization: [India]  # countries you are authorised to work in, e.g. ["India"]
-keywords_include: [Machine Learning]
+keywords_include: [Machine Learning, AI, Artificial Intelligence, LLM, Generative AI, GenAI, Deep Learning, NLP, Computer Vision, Data Science]
 keywords_exclude: []

@@ -29,6 +29,9 @@ class NotRefreshable(Exception):
     pass
 
 
+NOT_JOB_SOURCES = {"email_rejections"}     # policy entries that are not job sources (rejection tracking reads replies, not jobs)
+
+
 class DiscoveryService:
     def __init__(self, jobs: JobsRepository, runs: DiscoveryRunsRepository, registry: PolicyRegistry,
                  adapters: dict[str, JobAdapter], engine: DiscoveryEngine, prefs: Preferences):
@@ -39,6 +42,8 @@ class DiscoveryService:
         out = []
         for row in self.registry.describe():
             name = row["source"]
+            if name in NOT_JOB_SOURCES:
+                continue
             adapter = self.adapters.get(name)
             row["adapter_available"] = adapter is not None
             row["automated_discovery"] = bool(row["automated_discovery"] and adapter and adapter.automated_discovery_supported)

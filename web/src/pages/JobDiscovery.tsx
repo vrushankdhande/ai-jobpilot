@@ -2,13 +2,16 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { AppliedSwitch, useApplicationStates } from "../components/AppliedSwitch";
 import { PageHeader } from "../components/Layout";
-import { LinkedInBulkPaste, LinkedInJobsTable, LinkedInQuickImport, LinkedInSearch, type LinkedInSuggestions } from "../components/LinkedInTools";
-import { NaukriBulkPaste, NaukriQuickImport, NaukriSearch } from "../components/NaukriTools";
+import { JobSiteLinks } from "../components/JobSiteLinks";
+import { ListedSkillsCell, useListedSkills } from "../components/ListedSkills";
+import { PasteDescription, type PasteTarget } from "../components/PasteDescription";
+import { LinkedInBulkPaste, LinkedInJobsTable, LinkedInSearch, type LinkedInSuggestions } from "../components/LinkedInTools";
+import { NaukriBulkPaste, NaukriSearch } from "../components/NaukriTools";
 import { Alert, Check, DataTable, Empty, ErrorBox, Field, Loading, MetricRow, Paginator, Progress } from "../components/ui";
 import { fmtDt } from "../format";
 import { useFetch } from "../hooks";
 import {
-  blockedSources, buildDiscoverBody, buildImportBody, buildJobParams, bySource, defaultFilters, EMPLOYMENT_TYPES, exp, importMessage, jobRows, latestScores, money, runProgress,
+  addSearchHistory, blockedSources, buildDiscoverBody, clearSearchHistory, describeSearch, loadDiscoverForm, loadSearchHistory, saveDiscoverForm, buildImportBody, buildJobParams, bySource, defaultFilters, EMPLOYMENT_TYPES, exp, importMessage, jobRows, latestScores, money, runProgress,
   runSourceRows, SORTS, sourceLabel, sourceRows, WORK_MODES, type DiscoverForm, type JobFilters,
 } from "../lib/discovery";
 
@@ -33,14 +36,16 @@ export default function JobDiscovery() {
       {sources.result?.ok && <SourcesSection sources={list} />}
       {sources.result?.ok && <DiscoverSection sources={list} onRun={(r) => { setLastRun(r); status.reload(); runs.reload(); }} />}
       <LastRun run={lastRun ?? (status.result?.ok ? status.data : null)} />
-      <h2>LinkedIn (manual)</h2>
+      <JobSiteLinks defaultTitle={liSuggest.data?.current_title} defaultCity={liSuggest.data?.location} />
+      <h2>LinkedIn</h2>
+      <p className="muted">Automatic way: your <b>LinkedIn job-alert e-mails</b> are read from your Gmail once it is connected (<code>uv run python scripts/gmail_alerts_setup.py</code>) -
+        new LinkedIn jobs then arrive every morning with their links. JobPilot never opens LinkedIn itself. Any time: open the search, copy the page, paste it.</p>
       <LinkedInSearch suggestions={liSuggest.data} />
-      <LinkedInBulkPaste onDone={() => { runs.reload(); setLiKey((k) => k + 1); }} />
-      <LinkedInQuickImport onDone={() => { runs.reload(); setLiKey((k) => k + 1); }} />
-      <LinkedInJobsTable reloadKey={liKey} />
-      <h2>Naukri (manual)</h2>
+      <LinkedInBulkPaste onDone={() => { runs.reload(); setLiKey((k) => k + 1); }}><LinkedInJobsTable reloadKey={liKey} /></LinkedInBulkPaste>
+      <h2>Naukri</h2>
+      <p className="muted">Automatic way: create a <b>job alert</b> on Naukri and connect your Gmail once (<code>uv run python scripts/gmail_alerts_setup.py</code>) -
+        new Naukri jobs then arrive every morning by themselves, with their links. Until then: open the search, copy the page, paste it.</p>
       <NaukriSearch />
-      <NaukriQuickImport onDone={() => runs.reload()} />
       <NaukriBulkPaste onDone={() => runs.reload()} />
       <ImportSection onDone={() => runs.reload()} />
       {sources.result?.ok && <JobsSection sources={list} />}
@@ -83,7 +88,10 @@ function SourcesSection({ sources }: { sources: any[] }) {
 
 function DiscoverSection({ sources, onRun }: { sources: any[]; onRun: (run: any) => void }) {
   const runnable = sources.filter((s) => s.automated_discovery).map((s) => s.source as string);
-  const [f, setF] = useState<DiscoverForm>({ usePrefs: true, titles: "", skills: "", locations: "", companies: "", modes: [], employment: [], minSalary: 0, expMax: 0, postedDays: 0, sources: runnable });
+  const [f, setF] = useState<DiscoverForm>(() => loadDiscoverForm({ usePrefs: true, titles: "", skills: "", locations: "", companies: "", modes: [], employment: [], minSalary: 0,
+    expMax: 0, postedDays: 0, sources: runnable }, runnable));
+  useEffect(() => { saveDiscoverForm(f); }, [f]);                                // what you typed is still there next time
+  const [history, setHistory] = useState(() => loadSearchHistory());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warn, setWarn] = useState<{ message: string; skipped: Record<string, string> } | null>(null);
@@ -112,6 +120,7 @@ function DiscoverSection({ sources, onRun }: { sources: any[]; onRun: (run: any)
     }
     if (!alive.current) return;
     setProgress({ value: 1, text: `Finished: ${run.status ?? "unknown"}`, states: {} });
+    setHistory(addSearchHistory({ at: new Date().toISOString(), form: f, status: run.status ?? "unknown", found: run.totals?.new ?? null, fetched: run.totals?.fetched ?? null }));
     setBusy(false);
     if (run.status) onRun(run);
   }
@@ -146,6 +155,21 @@ function DiscoverSection({ sources, onRun }: { sources: any[]; onRun: (run: any)
       {warn && <Alert kind="warning">{warn.message}{Object.entries(warn.skipped).map(([s, why]) => <div key={s}>• <b>{s}</b>: {why}</div>)}</Alert>}
       {Object.entries(skipped).map(([s, why]) => <div key={s} className="muted">Skipped {s}: {why}</div>)}
       {progress && <><Progress value={progress.value} text={progress.text} /><pre>{JSON.stringify(progress.states)}</pre></>}
+      <details className="fold" open={history.length > 0}>
+        <summary><b>Recent searches ({history.length})</b> <span className="muted">· in this browser; press Use to put a search back in the form</span></summary>
+        {history.length === 0 ? <p className="muted">Your searches will be listed here after you run them.</p> : (
+          <>
+            <DataTable rows={history} rowKey={(h) => h.at} columns={[
+              { header: "When", render: (h) => fmtDt(h.at) },
+              { header: "Searched for", render: (h) => describeSearch(h.form) },
+              { header: "Sources", render: (h) => h.form.sources.map(sourceLabel).join(", ") },
+              { header: "Result", render: (h) => (h.found === null ? h.status : `${h.found} new of ${h.fetched ?? "?"} checked`) },
+              { header: "", render: (h) => <button type="button" onClick={() => setF({ ...h.form, sources: h.form.sources.filter((x) => runnable.includes(x)) })}>Use</button> },
+            ]} />
+            <button type="button" onClick={() => { clearSearchHistory(); setHistory([]); }}>Clear history</button>
+          </>
+        )}
+      </details>
     </>
   );
 }
@@ -224,6 +248,8 @@ function JobsSection({ sources }: { sources: any[] }) {
   const rows = jobRows(jobs, scoreOf);
   const applied = useApplicationStates(jobs.map((j) => j.job_id));
   const [applyErr, setApplyErr] = useState<string | null>(null);
+  const [pasteFor, setPasteFor] = useState<PasteTarget | null>(null);
+  const listed = useListedSkills(jobs.map((j) => j.job_id));
   const counts = Object.entries(bySource(jobs)).map(([k, v]) => `${sourceLabel(k)} ${v}`).join(", ");
 
   return (
@@ -258,10 +284,13 @@ function JobsSection({ sources }: { sources: any[] }) {
           {pg.loading && !pg.result && <Loading />}
           {jobs.length > 0 && <p className="muted">{jobs.length} of {total} job(s) shown · this page by source: {counts}</p>}
           {applyErr && <Alert kind="error">{applyErr}</Alert>}
+          {pasteFor && <PasteDescription key={pasteFor.id} job={pasteFor} onDone={() => { scores.reload(); pg.reload(); }} onClose={() => setPasteFor(null)} />}
           <DataTable rows={rows} rowKey={(r) => r.id} columns={[
             { header: "Applied", render: (r) => <AppliedSwitch jobId={r.id} title={r.title} company={r.company} state={applied.states[r.id]}
                 onRecorded={() => { setApplyErr(null); applied.reload(); }} onError={setApplyErr} /> },
-            { header: "Title", render: (r) => r.title }, { header: "Company", render: (r) => r.company }, { header: "Location", render: (r) => r.location }, { header: "Match", render: (r) => r.match ?? "" },
+            { header: "Title", render: (r) => r.title }, { header: "Company", render: (r) => r.company }, { header: "Location", render: (r) => r.location }, { header: "Match", render: (r) => (r.match !== null && r.match !== undefined ? r.match
+              : <button className="link-btn" onClick={() => setPasteFor({ id: r.id, title: r.title, company: r.company, url: r.url })}>＋ Paste description</button>) },
+            { header: "Listed skills", render: (r) => <ListedSkillsCell check={listed[r.id]} /> },
             { header: "Link", render: (r) => r.url ? <a href={r.url} target="_blank" rel="noopener noreferrer">Open job ↗</a> : "—" },
             { header: "Mode", render: (r) => r.mode }, { header: "Experience", render: (r) => r.experience }, { header: "Salary", render: (r) => r.salary }, { header: "Posted", render: (r) => r.posted },
             { header: "Discovered", render: (r) => r.discovered }, { header: "Sources", render: (r) => r.sources }, { header: "Status", render: (r) => r.status }, { header: "Duplicate check", render: (r) => r.duplicate },

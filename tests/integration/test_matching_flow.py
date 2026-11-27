@@ -349,3 +349,19 @@ def test_applied_filter_and_counts(matching_api, matching_service):
     assert matching_api.get("/api/matching/results/count", params={**q, "applied": "no"}).json() == {"total": 0}
     c = matching_api.get("/api/matching/counts").json()
     assert c["applied"] == 1 and c["to_apply"] == 0
+
+
+def test_listed_skills_of_alert_jobs_are_compared_with_the_profile_and_never_scored(matching_api, test_db, seeded):
+    from database.repositories.jobs_repository import JobsRepository
+    jobs = JobsRepository(test_db)
+    test_db["jobs"].insert_one({"job_id": "a" * 32, "content_hash": "h1", "source": "instahyre", "job_title": "AI Engineer", "job_description": None,
+                                "source_refs": [{"source": "instahyre", "original": {"listed_skills": ["Python", "LangChain", "Kubernetes", "Agentic Workflows"]}}]})
+    test_db["jobs"].insert_one({"job_id": "b" * 32, "content_hash": "h2", "source": "linkedin", "job_title": "ML Engineer", "source_refs": [{"source": "linkedin", "original": {}}]})
+    r = matching_api.post("/api/matching/listed-skills", json={"job_ids": ["a" * 32, "b" * 32, "not-an-id"]})
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert list(d) == ["a" * 32]                                                   # only jobs that list skills
+    a = d["a" * 32]
+    assert a["skills"] == ["Python", "LangChain", "Kubernetes", "Agentic Workflows"] and "Python" in a["have"]
+    assert "Kubernetes" in a["missing"] + [x["skill"] for x in a["related"]]          # related (e.g. via Docker) uses the scorer's own rules
+    assert test_db["job_matches"].count_documents({}) == 0 and jobs.get_job("a" * 32)["job_description"] is None   # nothing scored or changed

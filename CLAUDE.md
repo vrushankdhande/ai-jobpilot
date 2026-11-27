@@ -45,6 +45,11 @@ Guidance for working on AI JobPilot.
   `database/repositories/{scheduler,queue,notifications}_repository.py`, `backend/api/routes/scheduler.py`, `web/src/pages/{Dashboard,Automation}.tsx`, `config/automation_config.py`.
 - Dashboard (Phase 8, now React): `web/src/pages/*.tsx`, shared `web/src/components/{ui,Layout}.tsx`, `web/src/{api,hooks,format}.ts`, `web/src/lib/*`;
   `backend/services/{analytics_service,settings_service}.py`, `backend/api/routes/{analytics,interviews,settings}.py`, `database/{models/interview,repositories/interviews_repository}.py`, `config/yaml_edit.py`.
+- Sign-in / separate data per person: `config/tenant.py` (`current_tenant` ContextVar), `backend/services/auth_service.py` (scrypt hashes, HttpOnly `jp_session` cookie, owner = first account),
+  `backend/api/routes/auth.py`, `auth_middleware` + `require_owner` in `backend/api/security.py`, `web/src/auth.tsx`, `web/src/pages/Account.tsx`. Each non-owner person has their own database
+  (`<MONGODB_DATABASE>_u_<id>`) and `storage/users/<id>/`; `get_settings()` and `DatabaseManager.get_database()` follow the signed-in person, so repositories need no user filter.
+  Code without a request (scheduler threads, scripts) has no tenant = the owner's data; per-person schedulers are keyed in `scheduler._holder`. Never read another person's data through the base database.
+  Shared files (scoring weights, automation caps, .env) are owner-only. Tests run with `AUTH_ENABLED=false` (conftest); `tests/integration/test_auth.py` covers sign-in and isolation.
 - Config: `config/scoring_weights.yaml`, `job_preferences.yaml`, `skills.yaml` via `config/scoring_config.py` (nothing hard-coded).
 - Future-phase packages (`integrations/`, `browser/`, `scheduler/`, ...) exist as stubs; build on them, don't restructure.
 
