@@ -25,7 +25,8 @@ class DailyDiscovery:
         self.discovery, self.matching, self.queue, self.sched, self.limits_fn, self.notifier, self.now = discovery, matching, queue, sched, limits_fn, notifier, now_fn
         self.tz = get_zone(tz_name)
 
-    def run(self, trigger: str = "scheduled") -> dict:
+    def run(self, trigger: str = "scheduled", sources: list[str] | None = None) -> dict:
+        """``sources`` limits the run (e.g. ["email_alerts"] for the mail check during the day); None = every permitted source."""
         now, lim = self.now(), self.limits_fn()
         day = local_day(now, self.tz)
         out: dict = {"trigger": trigger, "day": day, "status": "completed", "new": 0, "duplicates": 0, "fetched": 0, "matched": 0, "queued": 0, "not_queued": 0,
@@ -35,7 +36,7 @@ class DailyDiscovery:
             out.update(status="skipped", notes=["daily discovery limit reached"])
             return out
         try:
-            run, skipped, query, runnable = self.discovery.start(None, None, True)
+            run, skipped, query, runnable = self.discovery.start(None, sources, True)
         except DiscoveryBusy:
             out.update(status="skipped", notes=["a discovery run is already in progress"])
             return out

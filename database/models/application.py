@@ -124,6 +124,9 @@ class ApplicationRecord(_Base):
     user_notes: str | None = None                           # the candidate's own notes (Phase 8); never used by automation
     dismissed_at: datetime | None = None                    # the candidate rejected this application before it was submitted
     dismissed_reason: str | None = None
+    # what the EMPLOYER answered after the application was sent: {"outcome": "rejected", "at", "source": "email"|"candidate", "signal_id",
+    # "company", "role", "sender_domain", "recorded_at"} - never e-mail text. Separate from ``state`` (which only tracks sending).
+    employer_response: dict | None = None
     notes: list[str] = Field(default_factory=list)
     attempts: int = 0
     failure_stage: str | None = None                        # before_submit | after_submit | None

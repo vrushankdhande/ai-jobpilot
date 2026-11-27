@@ -8,6 +8,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadDotEnv } from "./env.mjs";
 
+/** The value of the jp_session cookie (only URL-safe token characters), or "" - every other cookie is dropped. */
+export function sessionCookie(header) {
+  for (const part of String(header ?? "").split(";")) {
+    const [k, ...v] = part.trim().split("=");
+    const value = v.join("=");
+    if (k === "jp_session" && /^[A-Za-z0-9_-]{20,200}$/.test(value)) return value;
+  }
+  return "";
+}
+
 export function createApp({ backend, adminToken, staticDir }) {
   const app = express();
   app.disable("x-powered-by");
@@ -28,7 +38,9 @@ export function createApp({ backend, adminToken, staticDir }) {
     on: {
       proxyReq: (proxyReq, req) => {
         proxyReq.removeHeader("x-admin-token");                     // a browser can never choose the token
-        proxyReq.removeHeader("cookie");
+        proxyReq.removeHeader("cookie");                            // only the sign-in cookie goes on (HttpOnly: page scripts never see it)
+        const session = sessionCookie(req.headers.cookie);
+        if (session) proxyReq.setHeader("Cookie", `jp_session=${session}`);
         if (adminToken && req.headers["x-admin-action"] === "1") proxyReq.setHeader("X-Admin-Token", adminToken);
         proxyReq.removeHeader("x-admin-action");
       },

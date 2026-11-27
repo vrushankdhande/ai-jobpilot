@@ -57,7 +57,7 @@ class InterviewsRepository:
         return query
 
     def find_all(self, *, limit: int = 100, skip: int = 0, ascending: bool = True, **filters) -> list[dict]:
-        return list(self.col.find(self._query(**filters), _NO_ID).sort("scheduled_at", ASCENDING if ascending else DESCENDING).skip(skip).limit(limit))
+        return list(self.col.find(self._query(**filters), _NO_ID).sort([("scheduled_at", ASCENDING if ascending else DESCENDING), ("interview_id", ASCENDING)]).skip(skip).limit(limit))
 
     def count(self, **filters) -> int:
         return self.col.count_documents(self._query(**filters))

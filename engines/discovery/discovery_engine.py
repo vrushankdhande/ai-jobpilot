@@ -14,6 +14,7 @@ from database.repositories.discovery_runs_repository import DiscoveryRunsReposit
 from database.repositories.jobs_repository import JobsRepository
 from engines.discovery.deduplication import DedupConfig, canonical_url, company_key, decide, location_keys, title_key
 from engines.discovery.job_normalizer import InvalidJob, normalize
+from engines.matching.jd_parser import _norm_emp
 from engines.matching.skill_extractor import SkillCatalog
 from integrations.base_adapter import (
     AdapterError,
@@ -88,7 +89,8 @@ def matches_query(record: JobRecord, q: SearchQuery, catalog: SkillCatalog, now:
         return False, "experience"
     if q.work_modes and record.work_mode and record.work_mode not in q.work_modes:
         return False, "work_mode"
-    if q.employment_types and record.employment_type and record.employment_type not in {e.lower() for e in q.employment_types}:
+    # the preference is written the way a person types it ("Full Time"); jobs store the normalised form ("full-time")
+    if q.employment_types and record.employment_type and record.employment_type not in {_norm_emp(e) or e.strip().lower() for e in q.employment_types}:
         return False, "employment_type"
     if q.locations and record.location_keys and (record.work_mode != "remote" or q.remote_within_locations):
         if not _places(record) & set(location_keys(q.locations)):

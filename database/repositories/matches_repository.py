@@ -2,7 +2,7 @@
 import re
 from datetime import datetime
 
-from pymongo import DESCENDING
+from pymongo import ASCENDING, DESCENDING
 from pymongo.database import Database
 
 from ai.schemas.match_schema import MatchReport
@@ -81,7 +81,7 @@ class MatchesRepository:
             q["created_at"] = {**({"$gte": date_from} if date_from else {}), **({"$lte": date_to} if date_to else {})}
         if max_experience_required is not None:
             q["$or"] = [{"min_experience_required": None}, {"min_experience_required": {"$lte": max_experience_required}}]
-        order = [("match_score", DESCENDING), ("created_at", DESCENDING)] if sort == "score" else [("created_at", DESCENDING)]
+        order = [("match_score", DESCENDING), ("created_at", DESCENDING), ("match_id", ASCENDING)] if sort == "score" else [("created_at", DESCENDING), ("match_id", ASCENDING)]   # id breaks ties for stable pages
         if latest_only:
             rest = {k: v for k, v in q.items() if k not in base}
             pipeline: list[dict] = [{"$match": base}, {"$sort": {"created_at": -1}}, {"$group": {"_id": "$job_id", "doc": {"$first": "$$ROOT"}}},

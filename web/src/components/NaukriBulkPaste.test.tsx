@@ -19,7 +19,6 @@ describe("NaukriBulkPaste", () => {
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("Paste the copied Naukri results page"));
     await user.paste(PAGE);
-    await user.click(screen.getByRole("button", { name: "Read jobs from the pasted text" }));
     expect(screen.getByText(/2/, { selector: "b" })).toBeInTheDocument();
     await user.click(screen.getByLabelText("Import Data Scientist at Beta Labs"));          // untick the second job
     await user.click(screen.getByRole("button", { name: "Import 1 selected job(s)" }));
@@ -40,7 +39,6 @@ describe("NaukriBulkPaste", () => {
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("Paste the copied Naukri results page"));
     await user.paste(PAGE);
-    await user.click(screen.getByRole("button", { name: "Read jobs from the pasted text" }));
     await user.click(screen.getByLabelText("Import Data Scientist at Beta Labs"));
     await user.type(screen.getByLabelText("Link for AI Engineer"), "https://www.naukri.com/job-listings-ai-engineer-acme-pune-5-to-10-years-211125012345");
     await user.click(screen.getByRole("button", { name: "Import 1 selected job(s)" }));
@@ -63,7 +61,6 @@ describe("NaukriBulkPaste links", () => {
     fireEvent.change(box, { target: { value: PAGE } });
     expect(screen.getByText(/1 job link\(s\) found in what you copied/)).toBeInTheDocument();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Read jobs from the pasted text" }));
     expect(screen.getByLabelText("Link for AI Engineer")).toHaveValue("https://www.naukri.com/job-listings-ai-engineer-acme-pune-5-to-10-years-211125012345");
     expect(screen.getByLabelText("Link for Data Scientist")).toHaveValue("");
     await user.click(screen.getByLabelText("Import Data Scientist at Beta Labs"));

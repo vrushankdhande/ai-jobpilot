@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, type Result } from "../api";
+import { AutofillHelper } from "../components/AutofillHelper";
 import { PageHeader } from "../components/Layout";
 import { Alert, Check, ConfirmButton, DataTable, Empty, ErrorBox, Field, Loading, Metric, Tabs } from "../components/ui";
 import { downloadBlob, fmtDt } from "../format";
@@ -8,8 +9,8 @@ import { useFetch, useWebConfig } from "../hooks";
 import { answerWidget, canShowSubmit, checkRows, fieldsNeedingInput, mappingRows, nextStep, stateLabel } from "../lib/applications";
 import { canControl } from "../lib/automation";
 import {
-  answersPayload, applicationsPagePath, approveDisabled, canPrepareAgain, canReject, canSwitchToHandoff, confirmBody, eligibilityOf, eventWhen, jobLabel, orderJobs, OVERVIEW_TABS,
-  safeHttpUrl, showAnswers, showApprove, showRecheck, submitDisabled, TAB_STATES, warningsOf, type OverviewTab,
+  activeTasks, answersPayload, applicationsPagePath, searchJobs, approveDisabled, canPrepareAgain, canReject, canSwitchToHandoff, confirmBody, eligibilityOf, eventWhen, jobLabel, orderJobs, OVERVIEW_TABS,
+  safeHttpUrl, showAnswers, showApprove, showRecheck, submitDisabled, TAB_EMPTY, TAB_STATES, tabLabel, warningsOf, type OverviewTab,
 } from "../lib/queue";
 
 /** Application Queue: prepare, review, approve and (only where permitted) submit - or apply yourself with a prepared package.
@@ -47,11 +48,7 @@ export default function ApplicationQueue() {
           : (
             <>
               {fitIds && <Check label={`Show all stored jobs (${allJobs.length}${allJobs.length >= 200 ? "+" : ""}) instead of only those that fit my preferences`} checked={showAll} onChange={setShowAll} />}
-              <Field label="Select a job">
-                <select value={jobId} onChange={(e) => setSp({ job: e.target.value })}>
-                  {jobList.map((j) => <option key={j.job_id} value={j.job_id}>{jobLabel(j, byJob.get(j.job_id))}</option>)}
-                </select>
-              </Field>
+              <JobPicker jobs={jobList} jobId={jobId} labelOf={(j) => jobLabel(j, byJob.get(j.job_id))} onPick={(id) => setSp({ job: id })} />
               <JobDetail key={`d-${jobId}`} jobId={jobId} match={byJob.get(jobId)} existing={appByJob.get(jobId) ?? null} version={version} onChanged={refresh} />
             </>
           )}
@@ -60,23 +57,84 @@ export default function ApplicationQueue() {
 }
 
 // ------------------------------------------------------------------------------------------------ overview
+/** Search box with suggestions + the job list. Typing narrows the list to matching jobs (title or company) and selects the first match;
+ *  picking a suggestion selects that job. The selection itself lives in the URL, as before. */
+function JobPicker({ jobs, jobId, labelOf, onPick }: { jobs: any[]; jobId: string; labelOf: (j: any) => string; onPick: (id: string) => void }) {
+  const [q, setQ] = useState("");
+  const found = searchJobs(jobs, q, labelOf);
+  const shown = q.trim() && found.length ? found : jobs;
+  function type(value: string) {
+    setQ(value);
+    const exact = jobs.find((j) => labelOf(j) === value);                       // a suggestion was picked
+    if (exact) { onPick(exact.job_id); return; }
+    const hits = searchJobs(jobs, value, labelOf);
+    if (value.trim() && hits.length && !hits.some((j) => j.job_id === jobId)) onPick(hits[0].job_id);   // autofill the best match
+  }
+  return (
+    <div className="grid cols-2">
+      <Field label="Search jobs (title or company)">
+        <input type="search" list="queue-job-suggestions" value={q} placeholder="e.g. AI engineer, Mindtickle" onChange={(e) => type(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && found[0]) { e.preventDefault(); onPick(found[0].job_id); } }} />
+        <datalist id="queue-job-suggestions">{found.slice(0, 50).map((j) => <option key={j.job_id} value={labelOf(j)} />)}</datalist>
+      </Field>
+      <Field label="Select a job">
+        <select value={jobId} onChange={(e) => onPick(e.target.value)}>
+          {!shown.some((j) => j.job_id === jobId) && <option value={jobId}>{labelOf(jobs.find((j) => j.job_id === jobId) ?? {})}</option>}
+          {shown.map((j) => <option key={j.job_id} value={j.job_id}>{labelOf(j)}</option>)}
+        </select>
+      </Field>
+      {q.trim() !== "" && <span className="muted" role="status">{found.length ? `${found.length} matching job(s)` : "No job matches - showing all jobs"}</span>}
+    </div>
+  );
+}
+
+/** How many applications are in these states (one small request; only the total is used). */
+function useTotal(states: string[], version: number): number | null {
+  const r = useFetch(`${applicationsPagePath(states, 1)}&v=${version}`);
+  return r.result?.ok ? Number(r.data?.total ?? 0) : null;
+}
+
 function Overview({ version, onChanged, onPick }: { version: number; onChanged: () => void; onPick: (jobId: string) => void }) {
   const [tab, setTab] = useState<OverviewTab>(OVERVIEW_TABS[0]);
+  const queue = useFetch("/api/queue", { limit: 100, v: version });
+  const counts: Record<OverviewTab, number | null> = {
+    "Needs your action": useTotal(TAB_STATES["Needs your action"] as string[], version),
+    "Awaiting review / approval": useTotal(TAB_STATES["Awaiting review / approval"] as string[], version),
+    "Queued & processing": queue.result?.ok ? activeTasks(queue.data?.tasks).length : null,
+    "Manual handoff": useTotal(TAB_STATES["Manual handoff"] as string[], version),
+    "Failed / needs verification": useTotal(TAB_STATES["Failed / needs verification"] as string[], version),
+  };
+  const applied = useTotal(["SUBMITTED", "VERIFIED"], version);
+  const loaded = OVERVIEW_TABS.every((t) => counts[t] !== null);
+  const allEmpty = loaded && OVERVIEW_TABS.every((t) => counts[t] === 0);
+  const appliedLine = applied ? <> Your <b>{applied}</b> submitted application{applied === 1 ? " is" : "s are"} on <Link to="/applied-jobs">Applied Jobs →</Link></> : null;
   return (
     <>
       <h2>Overview</h2>
-      <Tabs tabs={[...OVERVIEW_TABS]} value={tab} onChange={(t) => setTab(t as OverviewTab)} />
-      {tab === "Queued & processing" ? <QueueTab version={version} onChanged={onChanged} /> : <StatesTab key={tab} states={TAB_STATES[tab] as string[]} version={version} onPick={onPick} />}
+      {!loaded && <Loading />}
+      {allEmpty && (
+        <Alert kind="success">
+          ✅ Nothing is waiting here. When JobPilot prepares an application for a good match (after the morning job search), it appears here for your review.{appliedLine}
+        </Alert>
+      )}
+      {loaded && !allEmpty && (
+        <>
+          <Tabs tabs={OVERVIEW_TABS.map((t) => tabLabel(t, counts[t]))} value={tabLabel(tab, counts[tab])}
+            onChange={(label) => setTab(OVERVIEW_TABS.find((t) => tabLabel(t, counts[t]) === label) ?? OVERVIEW_TABS[0])} />
+          {tab === "Queued & processing" ? <QueueTab version={version} onChanged={onChanged} /> : <StatesTab key={tab} states={TAB_STATES[tab] as string[]} empty={TAB_EMPTY[tab]} version={version} onPick={onPick} />}
+          {appliedLine && <p className="muted">{appliedLine}</p>}
+        </>
+      )}
     </>
   );
 }
 
-function StatesTab({ states, version, onPick }: { states: string[]; version: number; onPick: (jobId: string) => void }) {
+function StatesTab({ states, empty, version, onPick }: { states: string[]; empty: string; version: number; onPick: (jobId: string) => void }) {
   const page = useFetch(`${applicationsPagePath(states)}&v=${version}`);
   if (page.loading && !page.result) return <Loading />;
   if (!page.result?.ok) return <ErrorBox result={page.result} />;
   const items: any[] = page.data.items;
-  if (!items.length) return <Empty message="Nothing here." />;
+  if (!items.length) return <Empty message={empty} />;
   return (
     <>
       <DataTable rows={items} rowKey={(r) => r.application_id} columns={[
@@ -97,7 +155,7 @@ function QueueTab({ version, onChanged }: { version: number; onChanged: () => vo
   useEffect(() => { if (tasks.length && !tasks.some((t) => t.task_id === pick)) setPick(tasks[0].task_id); }, [tasks, pick]);
   if (q.loading && !q.result) return <Loading />;
   if (!q.result?.ok) return <ErrorBox result={q.result} />;
-  if (!tasks.length) return <Empty message="Nothing is queued or processing." />;
+  if (!tasks.length) return <Empty message={TAB_EMPTY["Queued & processing"]} />;
   const cur = tasks.find((t) => t.task_id === pick) ?? tasks[0];
   const act = async (a: string) => { const r = await api.post(`/api/queue/${cur.task_id}/${a}`, { admin: true }); setErr(r); if (r.ok) onChanged(); };
   return (
@@ -134,6 +192,7 @@ function JobDetail({ jobId, match, existing, version, onChanged }: { jobId: stri
         ? <Alert kind="success">🤖 Automation is permitted for this site ({pol.data.provider}). You still approve before anything is submitted.</Alert>
         : <Alert kind="warning">🧑‍💻 Manual handoff: {pol.data.reason}</Alert>)}
       {applyUrl && <p><a href={applyUrl} target="_blank" rel="noopener noreferrer">Open the application page (your own browser)</a></p>}
+      <AutofillHelper jobId={jobId} applyUrl={applyUrl} />
 
       <h2>2. Approved documents</h2>
       <Documents jobId={jobId} version={version} />

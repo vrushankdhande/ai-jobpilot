@@ -63,7 +63,7 @@ def test_operational_endpoints_are_refused_when_no_admin_token_is_configured(api
 def test_scheduler_start_stop_pause_resume_and_status(api):
     c, rt, *_ = api
     st = c.get("/api/scheduler/status").json()
-    assert st["enabled"] is False and st["timezone"] == "Asia/Kolkata" and {j["name"] for j in st["jobs"]} == {"daily_discovery", "application_worker", "daily_report", "notification_retry"}
+    assert st["enabled"] is False and st["timezone"] == "Asia/Kolkata" and {j["name"] for j in st["jobs"]} == {"daily_discovery", "mail_check", "rejection_check", "application_worker", "daily_report", "notification_retry"}
     d = next(j for j in st["jobs"] if j["name"] == "daily_discovery")
     assert d["schedule"].startswith("daily at 07:00") and d["next_run_local"] and st["limits"]["effective"]["max_applications_per_day"] == 20 and st["notifications"]["configured"] is True
     assert c.post("/api/scheduler/start", headers=H).json()["enabled"] is True and rt.sched_repo.get_state()["enabled"] is True and rt.scheduler.alive
@@ -152,7 +152,7 @@ def test_scheduler_resumes_after_a_restart_because_the_enabled_flag_is_persisted
     assert new_rt.scheduler.status()["enabled"] is True and not new_rt.scheduler.alive
     sched_routes.start_if_enabled(db, settings.model_copy(update={"admin_token": TOKEN}))
     try:
-        assert sched_routes._holder["rt"] is not None and sched_routes._holder["rt"].scheduler.alive
+        assert sched_routes._holder["owner"] is not None and sched_routes._holder["owner"].scheduler.alive
     finally:
         sched_routes.reset_runtime()
     assert db["scheduler_state"].find_one({"key": "state"})["enabled"] is True                       # shutting down does not clear the user's choice

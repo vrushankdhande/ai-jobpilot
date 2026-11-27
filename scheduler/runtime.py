@@ -13,6 +13,7 @@ from backend.services.application_service import ApplicationService, DuplicateAp
 from backend.services.discovery_service import DiscoveryService
 from backend.services.document_service import DocumentService
 from backend.services.matching_service import MatchingService
+from backend.services.rejection_service import RejectionService
 from browser.screenshot_manager import ScreenshotManager
 from browser.session_manager import SessionManager
 from config.automation_config import AutomationLimits, effective, in_window, load_limits
@@ -103,6 +104,14 @@ def prepare_processor(db: Database, settings: Settings, apps: ApplicationsReposi
     return process
 
 
+def _rejection_summary(s: dict) -> dict:
+    """Counts only for the scheduler run record."""
+    return {k: s.get(k) for k in ("status", "messages_found", "read", "auto_marked", "needs_confirmation", "unmatched")}
+
+
+MAIL_CHECK_SECONDS = 30 * 60           # how often job-alert e-mails are read during the day (inside the discovery window)
+
+
 def build_runtime(db: Database, settings: Settings, *, now_fn=lambda: datetime.now(timezone.utc), processor=None, transport=None, discovery_service=None,
                   http_client: httpx.Client | None = None) -> Runtime:
     sched_repo, queue_repo, apps = SchedulerRepository(db), QueueRepository(db), ApplicationsRepository(db)
@@ -117,6 +126,14 @@ def build_runtime(db: Database, settings: Settings, *, now_fn=lambda: datetime.n
     tz = get_zone(caps.timezone)
     jobs = [
         JobSpec("daily_discovery", disc.run, at=caps.discovery_time, lock_ttl=3600, description="Discover jobs on permitted sources, match them and queue eligible ones",
+                gate=lambda now: None if in_window(limits().discovery_window, now.astimezone(tz).time()) else "outside the discovery window"),
+        # new alert e-mails arrive all day: read them (only them - no career-page sweep) every 30 minutes inside the same time window
+        JobSpec("mail_check", lambda trigger: disc.run(trigger, sources=["email_alerts"]), every_seconds=MAIL_CHECK_SECONDS, lock_ttl=1800,
+                description="Read new job-alert e-mails (Gmail, read-only) and add their jobs",
+                gate=lambda now: None if in_window(limits().discovery_window, now.astimezone(tz).time()) else "outside the discovery window"),
+        # replies to applications that say "not selected" -> Applied Jobs (only fixed rejection wording is searched; see RejectionService)
+        JobSpec("rejection_check", lambda trigger: _rejection_summary(RejectionService(db, settings, client=http_client).scan(trigger)),
+                every_seconds=MAIL_CHECK_SECONDS, lock_ttl=1800, description="Find rejection e-mails (Gmail, read-only) and mark the matching applications",
                 gate=lambda now: None if in_window(limits().discovery_window, now.astimezone(tz).time()) else "outside the discovery window"),
         JobSpec("application_worker", lambda trigger: worker.run_once(), every_seconds=60, lock_ttl=1800, description="Prepare queued applications (never submits)"),
         JobSpec("daily_report", lambda trigger: {"report_id": report.generate(email=True, trigger=trigger)["report_id"]}, at=caps.report_time, lock_ttl=600,

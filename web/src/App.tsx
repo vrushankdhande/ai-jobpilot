@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { AuthGate } from "./auth";
 import Layout from "./components/Layout";
 import { FlashProvider, Loading } from "./components/ui";
 
@@ -15,10 +16,12 @@ const InterviewTracker = lazy(() => import("./pages/InterviewTracker"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Automation = lazy(() => import("./pages/Automation"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Account = lazy(() => import("./pages/Account"));
 
 export default function App() {
   return (
     <FlashProvider>
+      <AuthGate>
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route element={<Layout />}>
@@ -34,10 +37,12 @@ export default function App() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="automation" element={<Automation />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="account" element={<Account />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </Suspense>
+      </AuthGate>
     </FlashProvider>
   );
 }

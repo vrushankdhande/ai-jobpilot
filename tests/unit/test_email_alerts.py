@@ -54,7 +54,7 @@ def test_alert_email_is_split_into_jobs_with_links_and_details_and_the_footer_is
     a, b = jobs
     assert (a.title, a.company, a.location_text, a.posted_raw, a.salary_text) == ("Generative AI Engineer", "BizBrolly", ["Noida, Pune"], "1 day ago", None)
     assert a.url.startswith("https://www.naukri.com/job-listings-generative-ai-engineer") and "?" not in a.url      # tracking parameters dropped
-    assert a.description.startswith("Experience: 4-8 Yrs") and "LangChain" in a.description
+    assert a.description is None and a.original["experience"] == "4-8 Yrs"            # a few alert lines are not a job description: not scored
     assert (b.title, b.company, b.location_text, b.salary_text, b.work_mode_text) == ("ML Engineer", "Beta Labs", ["Pune (Hybrid)"], "12-18 Lacs P.A.", "Hybrid")
     assert a.source == "naukri" and a.provider == "gmail_alert"
     assert hidden == 1                                                                                 # "View job details" hid the job: skipped, not followed
@@ -65,7 +65,8 @@ def test_alert_email_is_split_into_jobs_with_links_and_details_and_the_footer_is
 def test_alert_jobs_normalise_like_any_other_job():
     jobs, _ = parse_naukri_alert(ALERT)
     rec = normalize(jobs[0], get_catalog(Settings()))
-    assert rec.source == "naukri" and rec.source_job_id == "231126915481" and rec.experience_min == 4 and "noida" in rec.location_keys
+    assert rec.source == "naukri" and rec.source_job_id == "231126915481" and "noida" in rec.location_keys
+    assert rec.job_description is None                                                  # no stub description -> never a made-up 100% score
 
 
 def test_plain_text_alert_falls_back_to_urls_in_the_text():
@@ -116,8 +117,12 @@ def test_adapter_reads_only_alert_senders_through_the_gmail_api_and_never_contac
     res = _adapter(tmp_path, handler).search(SearchQuery())
     assert [j.source_job_id for j in res.jobs] == ["231126915481", "211125099999"] and res.errors == []
     assert {r.url.host for r in seen} == {"gmail.googleapis.com"}                                   # never naukri.com, never a link from the mail
-    assert seen[0].url.params["q"] == "{from:naukri.com} newer_than:3d" and seen[0].headers["Authorization"] == "Bearer test-access-token"
-    assert seen[1].url.params["format"] == "full"
+    searches = [r.url.params["q"] for r in seen if r.url.path.endswith("/messages")]
+    assert searches == ["{from:naukri.com} newer_than:3d", "{from:jobalerts-noreply@linkedin.com} newer_than:3d", "{from:instahyre.com} newer_than:3d",
+                        "{from:glassdoor.com} newer_than:3d"]                       # one search per site: a busy sender cannot crowd out the others
+    assert all(r.headers["Authorization"] == "Bearer test-access-token" for r in seen)
+    reads = [r for r in seen if not r.url.path.endswith("/messages")]
+    assert len(reads) == 2 and reads[0].url.params["format"] == "full"                # the same message found twice is read once
     assert any("not from an alert sender" in n for n in res.notes) and any("1 alert e-mail(s) read" in n for n in res.notes)
 
 
@@ -140,3 +145,36 @@ def test_policy_file_lists_email_alerts_with_only_the_gmail_api_host():
     assert p.automated_allowed and p.allowed_hosts == ["gmail.googleapis.com"] and not p.auto_apply and not p.manual_allowed
     naukri = PolicyRegistry.load(Settings()).get("naukri")
     assert not naukri.automated_allowed                                                               # naukri.com itself stays closed to automation
+
+
+def test_real_alert_links_under_jd_are_read_cleaned_of_account_data_and_give_the_experience():
+    # real Naukri alert e-mails link to /jd/job-listings-...-<id>?...&uid=<your account id>&xid=... (made-up values below)
+    href = ("https://www.naukri.com/jd/job-listings-ai-engineer-acme-labs-pune-4-to-9-years-181126506595?xp=1&src=jobsearchDesk&xid=abcdef0123456789abcdef01"
+            "&uid=123456789&utm_campaign=x&utm_medium=email")
+    assert naukri_job_ref(href) == ("181126506595", "https://www.naukri.com/job-listings-ai-engineer-acme-labs-pune-4-to-9-years-181126506595")
+    html = f"""<table><tr><td><a href="{href}">AI Engineer</a></td></tr><tr><td>Acme Labs</td></tr>
+      <tr><td><a href="https://www.ambitionbox.com/reviews/acme-reviews"></a><a href="https://www.ambitionbox.com/reviews/acme-reviews">3.4</a></td></tr>
+      <tr><td>Pune</td></tr><tr><td>Are these jobs relevant? <a href="https://www.naukri.com/alert?x=1">Yes</a> <a href="https://www.naukri.com/alert?x=0">No</a></td></tr></table>"""
+    (job,), _ = parse_naukri_alert(html)
+    assert (job.title, job.company, job.location_text) == ("AI Engineer", "Acme Labs", ["Pune"])
+    assert job.description is None and job.original["experience"] == "4-9 Yrs"      # from Naukri's own job link; the job stays unscored
+    assert "uid" not in job.url and "?" not in job.url and "123456789" not in json.dumps(job.model_dump())
+
+
+def test_a_long_enough_job_text_in_an_alert_is_kept_as_the_description():
+    long = "We build retrieval systems in Python for enterprise search. " * 6
+    html = f"""<table><tr><td><a href="{J1}">Generative AI Engineer</a></td></tr><tr><td>BizBrolly</td></tr><tr><td>Pune</td></tr><tr><td>{long}</td></tr></table>"""
+    (job,), _ = parse_naukri_alert(html)
+    assert job.description.startswith("Experience: 4-8 Yrs") and "retrieval systems" in job.description
+
+
+def test_applied_jobs_mail_footer_and_personal_details_are_never_used():
+    # "You applied for N jobs" e-mails list similar jobs (titles only), then a footer with the candidate's own e-mail and phone (made up here)
+    html = f"""<table><tr><td><a href="{J1}">Generative AI Engineer</a></td></tr>
+      <tr><td><a href="https://www.naukri.com/mnjuser/recommendedjobs">View all recommendations</a></td></tr>
+      <tr><td>Boost your hiring potential</td></tr><tr><td>Recruiter will contact you at</td></tr><tr><td>jane.sample@example.com &amp; 9876543210</td></tr>
+      <tr><td><a href="https://www.naukri.com/mnjuser/profile">Update contact details</a></td></tr></table>"""
+    (job,), _ = parse_naukri_alert(html)
+    assert job.title == "Generative AI Engineer" and job.company is None                  # the footer link is not taken as the company
+    dump = json.dumps(job.model_dump())
+    assert "jane.sample" not in dump and "9876543210" not in dump and "recommendations" not in dump

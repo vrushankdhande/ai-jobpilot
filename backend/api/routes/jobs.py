@@ -186,6 +186,47 @@ def discover(body: DiscoverRequest, background: BackgroundTasks, response: Respo
     return {"run_id": run["run_id"], "status": "running", "runnable_sources": runnable, "skipped_sources": skipped}
 
 
+def _score_now(service: DiscoveryService, settings: Settings, job: dict | None) -> dict | None:
+    """Rules-only score of a stored job that has a description; None when it cannot be scored (no reviewed profile, too thin...)."""
+    if not job or not (job.get("job_description") or "").strip():
+        return None
+    try:
+        db = service.jobs._jobs.database
+        matching = MatchingService(service.jobs, MatchesRepository(db), ResumesRepository(db), UsersRepository(db), settings, load_scoring_config(settings),
+                                   load_preferences(settings), get_catalog(settings), ai_client=build_claude_client(settings))
+        report, _ = matching.score(job_id=job["job_id"], allow_unreviewed=False, use_ai=False)
+        return {"match_id": report.match_id, "match_score": report.match_score, "eligibility": report.eligibility.status, "classification": report.classification}
+    except Exception as exc:  # noqa: BLE001 - no reviewed profile, or a job too thin to score: storing the job still succeeded
+        logger.info("Job not scored: %s", type(exc).__name__)
+        return None
+
+
+class DescriptionRequest(BaseModel):
+    job_description: str = Field(min_length=200, max_length=60000, description="The job description you copied from the job's own page")
+
+
+@router.post("/{job_id}/description", summary="Add the job description you copied (for jobs from alert e-mails), then score the job")
+def add_description(job_id: str = Path(pattern=r"^[0-9a-f]{32}$"), body: DescriptionRequest = ..., service: DiscoveryService = Depends(get_discovery_service),
+                    settings: Settings = Depends(get_settings)):
+    """Fills in a stored job's MISSING description with text the candidate pasted - nothing is fetched. A description that is already there
+    is never replaced. The job is then scored with the deterministic rules."""
+    job = service.jobs.get_job(job_id)
+    if job is None:
+        raise HTTPException(404, "Job not found.")
+    if (job.get("job_description") or "").strip():
+        raise HTTPException(409, "This job already has a description.")
+    fields = {"job_title": job.get("job_title"), "company_name": job.get("company_name"), "job_description": body.job_description.strip(),
+              "location": ", ".join(job.get("location") or []) or None}
+    try:
+        service.import_job(job.get("job_url"), fields, job.get("source") if job.get("source") in ("linkedin", "naukri", "indeed", "instahyre") else None)
+    except (PolicyViolation, ValueError) as exc:
+        raise HTTPException(422, str(exc)) from None
+    updated = service.jobs.get_job(job_id)
+    if not (updated and (updated.get("job_description") or "").strip()):
+        raise HTTPException(409, "The description could not be added to this job; use 'Import a job manually' instead.")
+    return {"job": _out(updated, detail=True), "match": _score_now(service, settings, updated)}
+
+
 @router.post("/import", status_code=201, summary="Import a job by URL or from details you provide")
 def import_job(body: ImportRequest, response: Response, service: DiscoveryService = Depends(get_discovery_service),
                settings: Settings = Depends(get_settings)):
@@ -203,19 +244,21 @@ def import_job(body: ImportRequest, response: Response, service: DiscoveryServic
         raise HTTPException(502, str(exc)) from None
     if out["action"] in ("unchanged", "update", "merge"):
         response.status_code = 200
-    match = None                                   # score it right away (rules only) so the job shows a score and eligibility without another step
     job = out["job"]
-    if job and (job.get("job_description") or "").strip():
-        try:
-            db = service.jobs._jobs.database
-            matching = MatchingService(service.jobs, MatchesRepository(db), ResumesRepository(db), UsersRepository(db), settings, load_scoring_config(settings),
-                                       load_preferences(settings), get_catalog(settings), ai_client=build_claude_client(settings))
-            report, _ = matching.score(job_id=job["job_id"], allow_unreviewed=False, use_ai=False)
-            match = {"match_id": report.match_id, "match_score": report.match_score, "eligibility": report.eligibility.status, "classification": report.classification}
-        except Exception as exc:  # noqa: BLE001 - no reviewed profile, or a job too thin to score: the import itself still succeeded
-            logger.info("Imported job not scored: %s", type(exc).__name__)
+    match = _score_now(service, settings, job)     # score it right away (rules only) so the job shows a score and eligibility without another step
     return {"action": out["action"], "duplicate_confidence": out["confidence"], "reasons": out["reasons"],
             "source": out["source"], "job": _out(job, detail=True) if job else None, "match": match}
+
+
+def _outs(docs) -> list:
+    """List output; one unreadable stored record is skipped and logged (by id only) instead of failing the whole list."""
+    out = []
+    for d in docs:
+        try:
+            out.append(_out(d))
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Job %s could not be read and was left out of the list: %s", d.get("job_id"), type(exc).__name__)
+    return out
 
 
 def _job_filters(source, title, company, location, work_mode, employment_type, status, skill, posted_after, posted_before, discovered_after, discovered_before,
@@ -298,7 +341,7 @@ def page_jobs(source: str | None = Query(None, max_length=40), title: str | None
         from backend.services.matching_service import preferred_job_ids_in
         fits = preferred_job_ids_in(service.jobs._jobs.database, service.prefs, service.engine.catalog)
         f["job_ids"] = [i for i in f["job_ids"] if i in set(fits)] if "job_ids" in f else fits
-    return {"total": service.jobs.count_filtered(**f), "items": [_out(d) for d in service.list_jobs(**f, sort_by=sort_by, descending=descending, limit=limit, skip=skip)]}
+    return {"total": service.jobs.count_filtered(**f), "items": _outs(service.list_jobs(**f, sort_by=sort_by, descending=descending, limit=limit, skip=skip))}
 
 @router.get("", response_model=list[JobOut], summary="List discovered jobs")
 def list_jobs(
@@ -318,7 +361,7 @@ def list_jobs(
                              posted_before=posted_before, discovered_after=discovered_after, needs_review=needs_review,
                              min_experience=min_experience, max_experience=max_experience, sort_by=sort_by,
                              descending=descending, limit=limit, skip=skip)
-    return [_out(d) for d in docs]
+    return _outs(docs)
 
 
 @router.get("/{job_id}", response_model=JobDetail, summary="Job details")

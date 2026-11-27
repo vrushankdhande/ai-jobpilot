@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { PageHeader } from "../components/Layout";
+import { RejectionInbox } from "../components/RejectionInbox";
 import { Alert, DataTable, Empty, ErrorBox, Field, Loading, MetricRow, Paginator, useFlash } from "../components/ui";
 import { useFetch } from "../hooks";
 import { stateLabel } from "../lib/applications";
-import { appliedPath, appliedRows, buildAppliedParams, canRecordOutcome, confirmBody, eventRows, PAGE_SIZE, PRESETS, screenshotUrl } from "../lib/applied";
+import { appliedPath, appliedRows, buildAppliedParams, canRecordOutcome, confirmBody, eventRows, PAGE_SIZE, PRESETS, responseLabel, screenshotUrl } from "../lib/applied";
 
 /** Applied Jobs: only evidence-backed applications are shown as submitted. One application per job is enforced by the backend. */
 export default function AppliedJobs() {
@@ -31,6 +32,7 @@ export default function AppliedJobs() {
       <p className="muted">Submitted = the site showed a confirmation (or you recorded it). &apos;Outcome unknown&apos; needs your check - it is never retried automatically. Each job can have only one application record.</p>
       {a && <MetricRow items={[["Submitted", a.submitted], ["Verified", a.verified, "Reference number or your own confirmation"], ["Outcome unknown", a.by_state?.VERIFICATION_PENDING ?? 0, "Please verify"],
         ["Failed", a.failed, "Not submitted"], ["You apply (manual)", a.by_state?.MANUAL_HANDOFF_REQUIRED ?? 0]]} />}
+      <RejectionInbox onChanged={() => { res.reload(); probe.reload(); }} />
       <div className="grid" style={{ gridTemplateColumns: "2fr 2fr 1fr 1fr" }}>
         <Field label="Show"><select value={preset} onChange={(e) => reset(() => setPreset(e.target.value))}>{Object.keys(PRESETS).map((p) => <option key={p}>{p}</option>)}</select></Field>
         <Field label="Search company, job, reference or notes"><input value={q} onChange={(e) => reset(() => setQ(e.target.value))} /></Field>
@@ -47,7 +49,7 @@ export default function AppliedJobs() {
           <DataTable rows={appliedRows(items)} rowKey={(r) => r.id} columns={[
             { header: "Company", render: (r) => r.company }, { header: "Job title", render: (r) => r.title }, { header: "Date", render: (r) => r.date }, { header: "Status", render: (r) => r.status },
             { header: "How", render: (r) => r.how }, { header: "Platform", render: (r) => r.platform }, { header: "Confirmation ref", render: (r) => r.reference },
-            { header: "Confirmed by", render: (r) => r.confirmedBy }, { header: "Notes", render: (r) => r.notes }, { header: "Rejected", render: (r) => r.rejected },
+            { header: "Confirmed by", render: (r) => r.confirmedBy }, { header: "Notes", render: (r) => r.notes }, { header: "Employer response", render: (r) => r.response }, { header: "Skipped by you", render: (r) => r.rejected },
           ]} />
           {items.length > 0 && (
             <>
@@ -73,6 +75,7 @@ function Detail({ app, onChanged }: { app: any; onChanged: () => void }) {
   const [ref, setRef] = useState("");
   const [note, setNote] = useState("");
   const [outErr, setOutErr] = useState<string | null>(null);
+  const [respErr, setRespErr] = useState<string | null>(null);
   const s = stt.data;
   const shots: string[] = detail.data?.screenshots ?? [];
 
@@ -87,9 +90,25 @@ function Detail({ app, onChanged }: { app: any; onChanged: () => void }) {
     if (r.ok) { setFlash("Outcome recorded."); onChanged(); stt.reload(); events.reload(); } else setOutErr(`Not recorded: ${r.error}`);
   }
 
+  async function employer(undo: boolean) {
+    setRespErr(null);
+    const r = await api.post(`/api/applications/${id}/employer-rejected${undo ? "/undo" : ""}`);
+    if (r.ok) { setFlash(undo ? "Rejection removed." : "Marked as rejected by the employer."); onChanged(); events.reload(); } else setRespErr(`Not changed: ${r.error}`);
+  }
+  const rejected = app.employer_response?.outcome === "rejected";
+  const canMark = ["SUBMITTED", "VERIFIED", "VERIFICATION_PENDING", "MANUAL_HANDOFF_REQUIRED"].includes(app.state) && !app.dismissed_at;
+
   return (
     <>
       <h3>{app.company_name || "?"} — {app.job_title || "?"}</h3>
+      {canMark && (
+        <p>
+          <b>Employer response:</b> {rejected ? responseLabel(app.employer_response) : "no answer recorded yet"}
+          {rejected && app.employer_response?.phrase ? <span className="muted"> · “{app.employer_response.phrase}” from {app.employer_response.sender_domain}</span> : null}{" "}
+          <button type="button" onClick={() => employer(rejected)}>{rejected ? "↩️ Undo rejected" : "❌ Mark as rejected by employer"}</button>
+          {respErr && <Alert kind="error">{respErr}</Alert>}
+        </p>
+      )}
       {s && (
         <>
           <p><b>{stateLabel(s.state)}</b> · evidence: {(s.evidence ?? []).join(", ") || "none recorded"}{s.reference ? <> · reference <code>{s.reference}</code></> : null}{s.verified_by ? ` · confirmed by ${s.verified_by}` : ""}</p>

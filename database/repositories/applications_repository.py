@@ -61,7 +61,7 @@ class ApplicationsRepository:
         self.col.update_one({"application_id": application_id}, {"$inc": {field: 1}})
 
     @staticmethod
-    def _filter(*, state=None, states=None, job_id=None, resume_id=None, source=None, q=None, date_from=None, date_to=None, dismissed=None) -> dict:
+    def _filter(*, state=None, states=None, job_id=None, resume_id=None, source=None, q=None, date_from=None, date_to=None, dismissed=None, employer_outcome=None) -> dict:
         query: dict = {}
         if state:
             query["state"] = state
@@ -74,13 +74,19 @@ class ApplicationsRepository:
             rx = {"$regex": re.escape(q), "$options": "i"}
             query["$or"] = [{"company_name": rx}, {"job_title": rx}, {"user_notes": rx}, {"submission.reference": rx}]
         if date_from or date_to:
-            query["updated_at"] = {**({"$gte": date_from} if date_from else {}), **({"$lt": date_to} if date_to else {})}
+            # the date the list SHOWS: when it was submitted (or recorded as applied), else when the application was created - never the last
+            # change, so adding a note or a reference later does not move an application to another day
+            rng = {**({"$gte": date_from} if date_from else {}), **({"$lt": date_to} if date_to else {})}
+            query["$and"] = [{"$or": [{"submitted_at": rng}, {"submitted_at": None, "created_at": rng}]}]
         if dismissed is not None:
             query["dismissed_at"] = {"$ne": None} if dismissed else None
+        if employer_outcome:          # "rejected" = the employer said no; "none" = no answer recorded yet
+            query["employer_response.outcome"] = None if employer_outcome == "none" else employer_outcome
         return query
 
     def find_all(self, *, limit: int = 100, skip: int = 0, **filters) -> list[dict]:
-        return list(self.col.find(self._filter(**filters), _PROJECTION).sort("updated_at", -1).skip(skip).limit(limit))
+        # application_id breaks ties: without it, records changed at the same moment can repeat or go missing between pages
+        return list(self.col.find(self._filter(**filters), _PROJECTION).sort([("updated_at", -1), ("application_id", 1)]).skip(skip).limit(limit))
 
     def count(self, **filters) -> int:
         return self.col.count_documents(self._filter(**filters))

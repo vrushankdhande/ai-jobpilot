@@ -54,10 +54,58 @@ def extract_pdf_text(path: Path) -> str:
         if doc.needs_pass or doc.is_encrypted:
             raise ResumeExtractionError("encrypted", "The PDF is password protected. Remove the password and re-upload.")
         try:
-            pages = [p.get_text("text", sort=True) for i, p in enumerate(doc) if i < MAX_PDF_PAGES]
+            pages = [_with_link_targets(p, p.get_text("text", sort=True)) for i, p in enumerate(doc) if i < MAX_PDF_PAGES]
         except Exception:
             raise ResumeExtractionError("corrupted", "Text could not be read from the PDF.") from None
     return "\n".join(pages)
+
+
+_LINK_TARGET = re.compile(r"^https?://[^\s<>\"']{3,300}$", re.IGNORECASE)
+
+
+def _page_links(page) -> list[tuple[str, str]]:
+    """(visible anchor text, web address) for each hyperlink on the page, in reading order. Only http(s) addresses; e-mail and other link
+    types are skipped. Reading a link only reads the PDF itself - nothing is opened or fetched."""
+    found = []
+    try:
+        links = page.get_links()
+    except Exception:
+        return []
+    for link in links:
+        uri = (link.get("uri") or "").strip()
+        rect = link.get("from")
+        if not _LINK_TARGET.match(uri) or rect is None:
+            continue
+        try:
+            anchor = re.sub(r"\s+", " ", page.get_textbox(rect) or "").strip()
+        except Exception:
+            anchor = ""
+        found.append((round(rect.y0), rect.x0, anchor, uri))
+    found.sort(key=lambda t: (t[0], t[1]))
+    return [(anchor, uri) for _, _, anchor, uri in found]
+
+
+def _with_link_targets(page, text: str) -> str:
+    """The page text with each hidden link address written next to the words it sits behind, e.g. "LinkedIn" -> "LinkedIn
+    (https://www.linkedin.com/in/…)". A resume often shows only "LinkedIn | GitHub | Portfolio"; the addresses are part of the document,
+    so the profile can be read from (and checked against) them. Links whose address is already visible, or with no visible text (an
+    icon), are listed at the end of the page instead of being guessed into a position."""
+    pos, extra, seen = 0, [], set()
+    for anchor, uri in _page_links(page):
+        bare = uri.rstrip("/")
+        if bare in seen or bare.lower() in text.lower():
+            continue                                    # visible already (or a duplicate link on the same words)
+        seen.add(bare)
+        at = text.find(anchor, pos) if len(anchor) >= 2 else -1
+        if at < 0:
+            extra.append(uri)
+            continue
+        end = at + len(anchor)
+        text = f"{text[:end]} ({uri}){text[end:]}"
+        pos = end + len(uri) + 3
+    if extra:
+        text = text.rstrip("\n") + "\nLinks: " + " | ".join(extra) + "\n"
+    return text
 
 
 def extract_docx_text(path: Path) -> str:

@@ -33,6 +33,8 @@ def ensure_indexes(db: Database) -> None:
     db["applications"].create_index([("state", ASCENDING), ("updated_at", DESCENDING)], name="ix_application_state")
     db["applications"].create_index([("apply_url", ASCENDING)], name="ix_application_url")
     db["application_events"].create_index([("application_id", ASCENDING), ("seq", ASCENDING)], unique=True, name="uq_application_event_seq")
+    db["rejection_emails"].create_index([("message_key", ASCENDING)], unique=True, name="uq_rejection_message")   # each e-mail is processed once
+    db["rejection_emails"].create_index([("status", ASCENDING), ("received_at", DESCENDING)], name="ix_rejection_status")
     # Phase 7: scheduler, queue, counters, notifications, reports
     db["scheduler_locks"].create_index([("name", ASCENDING)], unique=True, name="uq_lock_name")
     db["scheduler_runs"].create_index([("run_id", ASCENDING)], unique=True, name="uq_sched_run")

@@ -56,7 +56,7 @@ class QueueRepository:
             q["status"] = status
         if statuses:
             q["status"] = {"$in": statuses}
-        return list(self.col.find(q, _NO_ID).sort([("priority", DESCENDING), ("created_at", ASCENDING)]).skip(skip).limit(limit))
+        return list(self.col.find(q, _NO_ID).sort([("priority", DESCENDING), ("created_at", ASCENDING), ("task_id", ASCENDING)]).skip(skip).limit(limit))
 
     def counts(self) -> dict[str, int]:
         out = {s: 0 for s in ALL_STATUSES}

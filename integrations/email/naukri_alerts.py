@@ -12,8 +12,10 @@ from urllib.parse import unquote
 
 from integrations.base_adapter import RawJob
 
-_ABS = re.compile(r"https?://([a-z0-9.-]+)/(job-listings-[a-z0-9-]*?-(\d{9,15}))(?=[/?#&\"'\s]|$)", re.I)
-_REL = re.compile(r"^/(job-listings-[a-z0-9-]*?-(\d{9,15}))(?=[/?#]|$)", re.I)
+# real alert e-mails link to /jd/job-listings-...-<id> (also seen without /jd/); the query (tracking, user id, auto-login) is always dropped
+_ABS = re.compile(r"https?://([a-z0-9.-]+)/(?:jd/)?(job-listings-[a-z0-9-]*?-(\d{9,15}))(?=[/?#&\"'\s]|$)", re.I)
+_REL = re.compile(r"^/(?:jd/)?(job-listings-[a-z0-9-]*?-(\d{9,15}))(?=[/?#]|$)", re.I)
+MIN_DESCRIPTION_CHARS = 300                     # below this the e-mail's lines are not a job description (see parse_naukri_alert)
 _BLOCK = {"p", "div", "br", "tr", "td", "th", "li", "ul", "ol", "table", "h1", "h2", "h3", "h4", "h5", "h6", "section"}
 _SKIP = {"script", "style", "head", "title"}
 
@@ -23,8 +25,11 @@ _POSTED = re.compile(r"^(?:posted\s*:?\s*)?(?:just now|today|few hours ago|\d{1,
 _NOISE = re.compile(r"^(?:apply|apply now|view job|view details|view & apply|save|saved|know more|see job|\||•|·|-|\d(?:\.\d)?|[\d,.]+k?\s*reviews?|new|hot job|"
                     r"recommended|easy apply|early applicant)$", re.I)
 _BAD_TITLE = re.compile(r"^(?:apply|apply now|view|view job|view details|view & apply|know more|see job|see all|view all.*|similar jobs|https?://.*|www\..*)$", re.I)
-_FOOTER = re.compile(r"\b(?:unsubscribe|manage (?:your )?(?:job )?alerts?|view all (?:jobs|matching jobs)|modify (?:this )?alert|privacy policy|"
-                     r"you are receiving this|download (?:the )?(?:naukri )?app|terms (?:and|&) conditions)\b", re.I)
+_FOOTER = re.compile(r"\b(?:unsubscribe|manage (?:your )?(?:job )?alerts?|view all (?:jobs|matching jobs|recommendations)|modify (?:this )?alert|privacy policy|"
+                     r"you are receiving this|download (?:the )?(?:naukri )?app|terms (?:and|&) conditions|recruiter will contact you|boost your hiring|"
+                     r"track applications|applies are a click away|update contact details|report a problem|are these jobs relevant)\b", re.I)
+# a line with an e-mail address or a phone number is never used for anything (the footer of some alerts shows the candidate's own)
+_PERSONAL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+|(?<!\d)(?:\+?91[\s-]?)?[6-9]\d{9}(?!\d)")
 _WORK = re.compile(r"\b(?:remote|hybrid|work from home|wfh|on-?site)\b", re.I)
 
 
@@ -145,7 +150,7 @@ def parse_naukri_alert(html: str, text: str = "") -> tuple[list[RawJob], int]:
             line = it[1] if it[0] == "text" else it[2]
             if it[0] == "link" and naukri_job_ref(it[1]):
                 continue
-            if not line:
+            if not line or _PERSONAL.search(line):
                 continue
             if _FOOTER.search(line):
                 break
@@ -168,7 +173,12 @@ def parse_naukri_alert(html: str, text: str = "") -> tuple[list[RawJob], int]:
                 company = line
             else:
                 details.append(line)
-        description = "\n".join(([f"Experience: {experience}"] if experience else []) + details) or None
+        if experience is None and (m := re.search(r"-(\d{1,2})-to-(\d{1,2})-years?-\d{9,15}$", urls[jid])):
+            experience = f"{m.group(1)}-{m.group(2)} Yrs"                    # from Naukri's own job link, not guessed
+        # An alert shows a few lines per job, not the job description. Those lines are NOT turned into a description: a stub ("Experience: 4-9 Yrs")
+        # would be scored as if the job had no requirements (100 / Excellent). The job stays unscored until its real description is imported.
+        details_text = "\n".join(details)
+        description = "\n".join(([f"Experience: {experience}"] if experience else []) + details) if len(details_text) >= MIN_DESCRIPTION_CHARS else None
         jobs.append(RawJob(source="naukri", provider="gmail_alert", source_job_id=jid, url=urls[jid], title=title, company=company,
                            description=description, location_text=locations, salary_text=salary if salary and not re.match(r"not disclosed", salary, re.I) else None,
                            work_mode_text=next((m.group(0) for loc in locations for m in [_WORK.search(loc)] if m), None), posted_raw=posted,

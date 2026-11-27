@@ -126,7 +126,14 @@ class Settings(BaseSettings):
     # Job-alert e-mails (Naukri alerts in YOUR Gmail, read with the read-only Gmail API). Separate, Fernet-encrypted credentials.
     job_alert_credentials_file: str = "storage/notifications/gmail_job_alerts.cred"
     job_alert_lookback_days: int = Field(default=3, ge=1, le=30)
+    # Rejection tracking: replies to your applications that say "not selected", found with a fixed Gmail search (same read-only access)
+    rejection_lookback_days: int = Field(default=30, ge=1, le=90)
     gmail_sender: str = "me"
+
+    # --- Logins: each person has their own account and their own, separate data (config/tenant.py) ---
+    auth_enabled: bool = True                  # False = no login, one person (only for the automated tests)
+    session_days: int = Field(default=14, ge=1, le=90)
+    cookie_secure: bool = False                # True when served over HTTPS
 
     @property
     def notification_credentials_path(self) -> Path:
@@ -195,5 +202,29 @@ class Settings(BaseSettings):
 
 
 @lru_cache
-def get_settings() -> Settings:
+def base_settings() -> Settings:
     return Settings()
+
+
+@lru_cache(maxsize=64)
+def _settings_for(tenant) -> Settings:
+    from config.tenant import database_for, setting_overrides
+    base = base_settings()
+    return base.model_copy(update={**setting_overrides(tenant), "mongodb_database": database_for(base.mongodb_database, tenant)})
+
+
+def get_settings() -> Settings:
+    """The settings for the person this request belongs to (see config/tenant.py): their own database, folders and job preferences."""
+    from config.tenant import current_tenant
+    tenant = current_tenant.get()
+    if tenant is None or tenant.is_owner:
+        return base_settings()
+    return _settings_for(tenant)
+
+
+def _clear() -> None:
+    base_settings.cache_clear()
+    _settings_for.cache_clear()
+
+
+get_settings.cache_clear = _clear       # type: ignore[attr-defined]  (tests reset the settings this way)

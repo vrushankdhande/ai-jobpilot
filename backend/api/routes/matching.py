@@ -236,6 +236,18 @@ def score(body: ScoreRequest, service: MatchingService = Depends(get_matching_se
     return ScoreResponse(report=report, created=created)
 
 
+class ListedSkillsRequest(BaseModel):
+    job_ids: list[str] = Field(max_length=200)
+
+
+@router.post("/listed-skills", summary="Skills a job site lists for these jobs (alert e-mails) vs your skills - information, not a score")
+def listed_skills(body: ListedSkillsRequest, service: MatchingService = Depends(get_matching_service)):
+    try:
+        return service.listed_skill_check([j for j in body.job_ids if isinstance(j, str) and len(j) == 32])
+    except (NoActiveResume, ProfileMissing, UnreviewedProfile) as exc:
+        raise _http(exc) from None
+
+
 @router.post("/bulk-score", response_model=BulkScoreResponse, summary="Match the candidate against several jobs")
 def bulk_score(body: BulkScoreRequest, service: MatchingService = Depends(get_matching_service)):
     try:

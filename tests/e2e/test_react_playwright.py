@@ -335,6 +335,7 @@ def test_job_discovery_filters_update_the_visible_count(stack, page):
 
 def test_job_matching_runs_an_analysis_and_shows_score_and_eligibility(stack, page):
     open_page(page, stack.web, "job-matching")
+    page.locator("summary", has_text="B. Job description").click()                    # sections A and B are folded away by default
     page.get_by_label("Paste the job description").fill(JDS[2]["text"])
     page.get_by_label("Job title", exact=True).fill("UI Test Engineer")
     page.get_by_label("Company", exact=True).fill("UI Test Co")

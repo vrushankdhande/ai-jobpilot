@@ -66,6 +66,19 @@ class MatchingService:
         self.jobs, self.matches, self.resumes, self.users = jobs, matches, resumes, users
         self.settings, self.cfg, self.prefs, self.catalog, self.ai = settings, cfg, prefs, catalog, ai_client
 
+    # ---- skills a job site lists (alert e-mails), compared with the candidate - information, never a score ----------------
+    def listed_skill_check(self, job_ids: list[str]) -> dict[str, dict]:
+        from engines.matching.candidate_view import build_candidate_view
+        from engines.matching.listed_skills import compare_listed_skills
+        profile = self.profile_for_matching(None, False)
+        mine = build_candidate_view(profile, self.catalog, self.cfg.seniority.bands).skill_names
+        out: dict[str, dict] = {}
+        for d in self.jobs._jobs.find({"job_id": {"$in": list(job_ids)}}, {"_id": 0, "job_id": 1, "source_refs": 1}):
+            listed = next((r.get("original", {}).get("listed_skills") for r in d.get("source_refs") or [] if (r.get("original") or {}).get("listed_skills")), None)
+            if listed:
+                out[d["job_id"]] = {"skills": list(listed), **compare_listed_skills(list(listed), mine, self.catalog)}
+        return out
+
     # ---- profile ---------------------------------------------------------------------------------
     def profile_for_matching(self, resume_id: str | None, allow_unreviewed: bool) -> CandidateProfile:
         rid = resume_id or self.users.get_active_resume_id()

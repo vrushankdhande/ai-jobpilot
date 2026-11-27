@@ -64,3 +64,43 @@ describe("discovery helpers", () => {
     expect(runProgress({ requested_sources: ["a"], sources: { a: { state: "done" } } })).toBe(0.95);
   });
 });
+
+describe("remembered Discover jobs form", async () => {
+  const { loadDiscoverForm, saveDiscoverForm } = await import("./discovery");
+  const defaults = { usePrefs: true, titles: "", skills: "", locations: "", companies: "", modes: [], employment: [], minSalary: 0, expMax: 0, postedDays: 0, sources: ["career_pages", "email_alerts"] };
+  const memory = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } }; };
+  it("brings back what was typed, keeps only sources that still run, and survives broken or blocked storage", () => {
+    const store = memory();
+    saveDiscoverForm({ ...defaults, usePrefs: false, titles: "AI Engineer", locations: "Pune", postedDays: 7, sources: ["career_pages", "gone_source"] }, store);
+    const f = loadDiscoverForm(defaults, ["career_pages", "email_alerts"], store);
+    expect(f).toMatchObject({ usePrefs: false, titles: "AI Engineer", locations: "Pune", postedDays: 7, sources: ["career_pages"] });
+    store.setItem("jobpilot.discoverForm.v1", "{not json");
+    expect(loadDiscoverForm(defaults, ["career_pages"], store)).toEqual(defaults);
+    store.setItem("jobpilot.discoverForm.v1", JSON.stringify({ titles: 5, modes: "remote" }));     // wrong types are ignored
+    expect(loadDiscoverForm(defaults, ["career_pages", "email_alerts"], store)).toEqual(defaults);
+    const blocked = { getItem: () => { throw new Error("blocked"); }, setItem: () => { throw new Error("blocked"); } };
+    expect(loadDiscoverForm(defaults, ["career_pages"], blocked)).toEqual(defaults);
+    expect(() => saveDiscoverForm(defaults, blocked)).not.toThrow();
+  });
+});
+
+describe("recent searches", async () => {
+  const { addSearchHistory, loadSearchHistory, clearSearchHistory, describeSearch, MAX_HISTORY } = await import("./discovery");
+  const base = { usePrefs: false, titles: "AI Engineer\nML Engineer", skills: "", locations: "Pune", companies: "", modes: ["remote"], employment: [], minSalary: 0, expMax: 0, postedDays: 7, sources: ["career_pages"] };
+  const memory = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } }; };
+  it("lists newest first, replaces a repeated search, caps the list, and describes each search in words", () => {
+    const store = memory();
+    addSearchHistory({ at: "2026-11-25T10:00:00Z", form: base, status: "completed", found: 3, fetched: 100 }, store);
+    addSearchHistory({ at: "2026-11-25T11:00:00Z", form: { ...base, locations: "Bengaluru" }, status: "completed", found: 0, fetched: 90 }, store);
+    let list = addSearchHistory({ at: "2026-11-25T12:00:00Z", form: base, status: "completed", found: 1, fetched: 101 }, store);
+    expect(list.map((e) => [e.at, e.found])).toEqual([["2026-11-25T12:00:00Z", 1], ["2026-11-25T11:00:00Z", 0]]);
+    for (let i = 0; i < 30; i++) list = addSearchHistory({ at: `t${i}`, form: { ...base, postedDays: i }, status: "completed", found: 0, fetched: 0 }, store);
+    expect(loadSearchHistory(store)).toHaveLength(MAX_HISTORY);
+    expect(describeSearch(base)).toBe("AI Engineer, ML Engineer · in Pune · remote · last 7 days");
+    expect(describeSearch({ ...base, titles: "", usePrefs: true, locations: "", modes: [], postedDays: 0 })).toBe("your saved preferences");
+    clearSearchHistory(store);
+    expect(loadSearchHistory(store)).toEqual([]);
+    store.setItem("jobpilot.discoverHistory.v1", "{broken");
+    expect(loadSearchHistory(store)).toEqual([]);
+  });
+});

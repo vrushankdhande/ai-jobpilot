@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { schedulerState } from "../format";
+import { useAuth } from "../auth";
 import { useFetch, useWebConfig } from "../hooks";
 import { FlashBanner } from "./ui";
 
@@ -29,10 +30,18 @@ export default function Layout() {
   const sched = useFetch(health.data ? "/api/scheduler/status" : null);
   const cfg = useWebConfig();
   const up = Boolean(health.result?.ok);
+  const { user, authEnabled, logout } = useAuth();
   return (
     <div className="shell">
       <aside className="sidebar" aria-label="Sidebar">
         <h3>🧭 AI JobPilot</h3>
+        {authEnabled && user && (
+          <div className="whoami" aria-label="Signed in">
+            <div>👤 <b>{user.name}</b>{user.role === "owner" && <span className="muted"> · owner</span>}</div>
+            <NavLink to="/account">My account{user.role === "owner" ? " & users" : ""}</NavLink>{" · "}
+            <button type="button" className="link-btn" onClick={logout}>Sign out</button>
+          </div>
+        )}
         <nav aria-label="App pages">
           {PAGES.map((p) => <NavLink key={p.path} to={p.path} end={p.path === "/"}>{p.icon} {p.label}</NavLink>)}
         </nav>

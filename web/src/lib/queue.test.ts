@@ -100,3 +100,26 @@ describe("Needs your action tab and job order", () => {
     expect(orderJobs(jobs, (id) => score[id]).map((j) => j.job_id)).toEqual(["b", "a", "d", "c"]);
   });
 });
+
+describe("overview tab labels", () => {
+  it("adds the count to a tab once it is known, and counts only active queue tasks", async () => {
+    const { tabLabel, activeTasks, TAB_EMPTY, OVERVIEW_TABS: tabs } = await import("./queue");
+    expect(tabLabel("Manual handoff", 3)).toBe("Manual handoff (3)");
+    expect(tabLabel("Manual handoff", null)).toBe("Manual handoff");
+    expect(activeTasks([{ status: "queued" }, { status: "completed" }, { status: "paused" }, { status: "cancelled" }])).toHaveLength(2);
+    for (const t of tabs) expect(TAB_EMPTY[t].length).toBeGreaterThan(20);     // every tab explains itself when empty
+  });
+});
+
+describe("job search", () => {
+  it("matches every typed word in title or company, in any order and case", async () => {
+    const { searchJobs } = await import("./queue");
+    const jobs = [{ job_id: "1", job_title: "AI Product Engineer", company_name: "Mindtickle" }, { job_id: "2", job_title: "Data Scientist", company_name: "Sigmoid" },
+      { job_id: "3", job_title: "Staff Engineer, Applied AI", company_name: "GitLab" }];
+    expect(searchJobs(jobs, "").map((j) => j.job_id)).toEqual(["1", "2", "3"]);
+    expect(searchJobs(jobs, "ai engineer").map((j) => j.job_id)).toEqual(["1", "3"]);
+    expect(searchJobs(jobs, "MINDTICKLE").map((j) => j.job_id)).toEqual(["1"]);
+    expect(searchJobs(jobs, "gitlab applied").map((j) => j.job_id)).toEqual(["3"]);
+    expect(searchJobs(jobs, "nothing like this")).toEqual([]);
+  });
+});

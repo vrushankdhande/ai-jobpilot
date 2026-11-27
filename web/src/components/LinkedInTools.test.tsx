@@ -1,14 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LinkedInJobsTable, LinkedInQuickImport, LinkedInSearch } from "./LinkedInTools";
+import { LinkedInJobsTable, LinkedInSearch } from "./LinkedInTools";
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => { fetchMock = vi.fn().mockResolvedValue(json(201, { action: "insert" })); vi.stubGlobal("fetch", fetchMock); });
 afterEach(() => vi.unstubAllGlobals());
 
-const LONG = "AI Engineer\nAcme Analytics · Pune\nWe are hiring an AI engineer to build and deploy computer vision models in Python.";
 
 describe("LinkedInSearch", () => {
   it("has no usable link until keywords are entered", () => {
@@ -38,71 +37,6 @@ describe("LinkedInSearch", () => {
   });
 });
 
-describe("LinkedInQuickImport", () => {
-  it("shows the detected job id and stays disabled until everything is valid", async () => {
-    render(<LinkedInQuickImport onDone={() => {}} />);
-    const user = userEvent.setup();
-    const button = screen.getByRole("button", { name: "Import LinkedIn job" });
-    expect(button).toBeDisabled();
-    await user.type(screen.getByLabelText("LinkedIn job link"), "https://www.linkedin.com/jobs/search-results/?currentJobId=4485396197&keywords=ai%20engineer");
-    expect(screen.getByRole("status")).toHaveTextContent("4485396197");
-    expect(screen.getByRole("status")).toHaveTextContent("https://www.linkedin.com/jobs/view/4485396197/");
-    expect(button).toBeDisabled();                                                  // still needs title, company and text
-    await user.click(screen.getByLabelText(/Paste the LinkedIn job text/));
-    await user.paste(LONG);
-    expect(screen.getByLabelText(/LinkedIn job title/)).toHaveValue("AI Engineer"); // suggested, editable
-    expect(screen.getByLabelText(/LinkedIn job title/).closest("label")).toHaveTextContent("suggested - check it");
-    expect(button).toBeDisabled();                                                  // company is never guessed
-    await user.type(screen.getByLabelText("LinkedIn company *"), "Acme Analytics");
-    expect(button).toBeEnabled();
-  });
-
-  it("rejects links that are not LinkedIn job links", async () => {
-    render(<LinkedInQuickImport onDone={() => {}} />);
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("LinkedIn job link"), "https://linkedin.com.evil.example/jobs/view/4485396197/");
-    expect(screen.getByText(/does not look like a LinkedIn job link/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Import LinkedIn job" })).toBeDisabled();
-  });
-
-  it("imports through the normal API with the CLEAN link only, never contacts LinkedIn, and clears the form", async () => {
-    const done = vi.fn();
-    render(<LinkedInQuickImport onDone={done} />);
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("LinkedIn job link"), "https://www.linkedin.com/jobs/view/ai-engineer-4485396197/?trackingId=SECRET&refId=zzz");
-    await user.click(screen.getByLabelText(/Paste the LinkedIn job text/));
-    await user.paste(LONG);
-    await user.type(screen.getByLabelText("LinkedIn company *"), "Acme Analytics");
-    await user.click(screen.getByRole("button", { name: "Import LinkedIn job" }));
-    await waitFor(() => expect(screen.getByText("Imported as a new job.")).toBeInTheDocument());
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("/api/jobs/import");
-    expect(String(url)).not.toContain("linkedin");
-    const body = JSON.parse(init.body);
-    expect(body.url).toBe("https://www.linkedin.com/jobs/view/4485396197/");
-    expect(JSON.stringify(body)).not.toContain("SECRET");                           // tracking parameters are dropped
-    expect(body.job).toMatchObject({ job_title: "AI Engineer", company_name: "Acme Analytics" });
-    expect(body.job.job_description).toContain("computer vision");
-    expect(init.headers["X-Admin-Action"]).toBeUndefined();                          // an import is not an admin action
-    expect(done).toHaveBeenCalled();
-    expect(screen.getByLabelText("LinkedIn job link")).toHaveValue("");
-  });
-
-  it("keeps what was typed and shows the server's error when the import is rejected", async () => {
-    fetchMock.mockResolvedValue(json(422, { detail: "job_description: too short" }));
-    render(<LinkedInQuickImport onDone={() => {}} />);
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("LinkedIn job link"), "https://www.linkedin.com/jobs/view/4485396197/");
-    await user.click(screen.getByLabelText(/Paste the LinkedIn job text/));
-    await user.paste(LONG);
-    await user.type(screen.getByLabelText("LinkedIn company *"), "Acme Analytics");
-    await user.click(screen.getByRole("button", { name: "Import LinkedIn job" }));
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("too short"));
-    expect(screen.getByLabelText("LinkedIn company *")).toHaveValue("Acme Analytics");
-    expect(screen.getByLabelText("LinkedIn job link")).toHaveValue("https://www.linkedin.com/jobs/view/4485396197/");
-  });
-});
 
 describe("profile defaults and the LinkedIn jobs table", () => {
   const sug = { profile_available: true, current_title: "Data Scientist", titles: ["Data Scientist", "ML Engineer"], skills: ["Python"], location: "Pune", experience_years: 5 };

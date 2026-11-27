@@ -61,6 +61,7 @@ class FakeDiscovery:
     def start(self, overrides, sources, use_preferences=True):
         from backend.services.discovery_service import DiscoveryBusy
         from integrations.base_adapter import SearchQuery
+        self.sources_asked = getattr(self, "sources_asked", []) + [sources]
         if self.busy:
             raise DiscoveryBusy("busy")
         if self.none:
@@ -624,3 +625,21 @@ def test_report_day_uses_the_local_timezone_boundary(env):
     add_app(env, "a1" * 16, "SUBMITTED", outcome="confirmed", submitted_at=just_before)
     add_app(env, "a2" * 16, "SUBMITTED", outcome="confirmed", submitted_at=just_after)
     assert env.rt.report.build("2026-11-13")["applications"]["submitted"] == 1 and env.rt.report.build("2026-11-14")["applications"]["submitted"] == 1
+
+
+def test_mail_check_runs_every_30_minutes_inside_the_window_and_reads_only_alert_e_mails(env):
+    from scheduler.runtime import MAIL_CHECK_SECONDS
+    rt = env.build()
+    spec = next(j for j in rt.scheduler.jobs if j.name == "mail_check")
+    assert spec.every_seconds == MAIL_CHECK_SECONDS == 30 * 60 and spec.gate is not None
+    out = rt.scheduler.run_now("mail_check", "manual")
+    assert env.discovery.sources_asked[-1] == ["email_alerts"]                    # alert e-mails only, never a career-page sweep
+    assert out is not None
+
+
+def test_rejection_check_runs_every_30_minutes_and_does_nothing_without_gmail(env):
+    from scheduler.runtime import MAIL_CHECK_SECONDS
+    rt = env.build()
+    spec = next(j for j in rt.scheduler.jobs if j.name == "rejection_check")
+    assert spec.every_seconds == MAIL_CHECK_SECONDS and spec.gate is not None
+    assert spec.fn("manual")["status"] == "not_set_up"                             # the test credentials file does not exist: nothing is read

@@ -301,8 +301,10 @@ describe("other rules", () => {
   it("states tab shows an empty state and queue controls are disabled without ADMIN_TOKEN", async () => {
     backend(null, { "GET /web/config": () => ({ adminEnabled: false }), "GET /api/queue": () => ({ counts: {}, tasks: [{ task_id: "t1", status: "queued", job_title: "X", attempts: 0, max_attempts: 2 }] }) });
     renderPage();
-    expect(await screen.findByText(/Nothing here\./)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("tab", { name: "Queued & processing" }));
+    expect(await screen.findByText(/Nothing needs you right now/)).toBeInTheDocument();            // an empty tab says what it is for
+    expect(screen.getByRole("tab", { name: "Queued & processing (1)" })).toBeInTheDocument();      // every tab shows its count
+    expect(screen.getByRole("tab", { name: "Manual handoff (0)" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /^Queued & processing/ }));
     expect(await screen.findByRole("button", { name: /Pause/ })).toBeDisabled();
     expect(screen.getByText(/Queue controls need ADMIN_TOKEN/)).toBeInTheDocument();
   });
@@ -312,8 +314,32 @@ describe("other rules", () => {
       ? { total: 1, items: [{ application_id: "a2", job_id: "j2", job_title: "LinkedIn Role", company_name: "Big Co", state: "MANUAL_HANDOFF_REQUIRED", mode: "manual_handoff", match_score: 62.7, eligibility: "PASS" }] }
       : { total: 0, items: [] }) });
     renderPage();
-    expect(await screen.findByRole("tab", { name: "Needs your action", selected: true })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Needs your action (1)", selected: true })).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: "Open LinkedIn Role" }));
     await waitFor(() => expect((screen.getByLabelText("Select a job") as HTMLSelectElement).value).toBe("j2"));
+  });
+
+  it("when nothing is waiting anywhere it says so once (no row of empty tabs) and points to the submitted applications", async () => {
+    backend(null, { "GET /api/applications/page": (c) => ({ total: c.url.includes("states=SUBMITTED") ? 22 : 0, items: [] }) });
+    renderPage();
+    expect(await screen.findByText(/Nothing is waiting here/)).toBeInTheDocument();
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getByRole("link", { name: /Applied Jobs/ })).toHaveAttribute("href", "/applied-jobs");
+    expect(screen.getByText("22")).toBeInTheDocument();
+  });
+});
+
+describe("job search box", () => {
+  it("typing narrows the list and selects the first match", async () => {
+    backend(null);
+    renderPage();
+    const select = (await screen.findByLabelText("Select a job")) as HTMLSelectElement;
+    expect(select.value).toBe("j1");
+    await userEvent.type(screen.getByLabelText("Search jobs (title or company)"), "big co");
+    await waitFor(() => expect(select.value).toBe("j2"));                                 // autofilled with the only match
+    expect(screen.getByText("1 matching job(s)")).toBeInTheDocument();
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(["j2"]);              // the list shows only the matches
+    await userEvent.clear(screen.getByLabelText("Search jobs (title or company)"));
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(expect.arrayContaining(["j1", "j2"]));
   });
 });

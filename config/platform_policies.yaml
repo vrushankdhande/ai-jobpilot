@@ -77,14 +77,30 @@ email_alerts:
   manual_import: false
   allowed_hosts: [gmail.googleapis.com]
   requests_per_minute: 60
-  max_requests_per_run: 41
-  max_jobs_per_run: 300
-  reviewed_on: "2026-11-24"
+  max_requests_per_run: 170        # 4 searches + up to 40 alert e-mails per site
+  max_jobs_per_run: 500
+  reviewed_on: "2026-11-25"
   needs_human_confirmation: false
   basis: >-
     Job-alert e-mails in the candidate's OWN mailbox, read with the official Gmail API (gmail.readonly scope, the candidate's own
-    OAuth consent). Only messages from allow-listed alert senders (naukri.com) are opened. No job site is contacted, links in the
+    OAuth consent). Only messages from allow-listed alert senders (naukri.com, LinkedIn's job-alert address, instahyre.com, glassdoor.com) are opened. No job site is contacted, links in the
     e-mails are stored but never opened, and e-mail bodies are not stored. This is not scraping: the jobs were sent to the candidate.
+
+email_rejections:                  # not a job source: replies to YOUR applications, for the Applied Jobs page
+  auto_apply: false
+  discovery_status: ENABLED          # inert until you authorise read-only Gmail access (scripts/gmail_alerts_setup.py)
+  manual_import: false
+  allowed_hosts: [gmail.googleapis.com]
+  requests_per_minute: 60
+  max_requests_per_run: 70         # 1 search + up to 60 new e-mails
+  max_jobs_per_run: 0
+  reviewed_on: "2026-11-26"
+  needs_human_confirmation: false
+  basis: >-
+    Replies to the candidate's own job applications in their OWN mailbox, read with the official Gmail API (gmail.readonly scope, the
+    candidate's own OAuth consent). Gmail is asked only for messages containing fixed rejection wording ("not moving forward",
+    "regret to inform", ...) from the last 30 days; nothing else is listed or opened, links are never opened, and only company, role,
+    sender domain, date and the matched phrase are kept - never the e-mail text. Chosen by the candidate on 2026-11-26.
 
 career_pages:
   auto_apply: true

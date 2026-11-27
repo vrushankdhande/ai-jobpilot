@@ -52,3 +52,11 @@ def test_indian_city_or_state_without_the_word_india_still_matches_india():
 def test_places_outside_india_are_not_mistaken_for_india():
     for loc in (["Indianapolis, IN"], ["Indiana, US"], ["London, UK"], ["San Francisco, CA, US"], ["Singapore"]):
         assert _ok(_job(loc), locations=["Pune", "India"]) == (False, "location"), loc
+
+
+def test_employment_type_preference_typed_by_a_person_matches_the_stored_form():
+    job = _job(["Pune, India"]).model_copy(update={"employment_type": "full-time"})
+    assert _ok(job, employment_types=["Full Time"])[0]                 # "Full Time" (Settings) == "full-time" (stored)
+    assert _ok(job, employment_types=["full-time"])[0]
+    assert _ok(job.model_copy(update={"employment_type": "contract"}), employment_types=["Full Time"]) == (False, "employment_type")
+    assert _ok(job.model_copy(update={"employment_type": None}), employment_types=["Full Time"])[0]     # unknown type is kept

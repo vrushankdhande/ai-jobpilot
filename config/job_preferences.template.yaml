@@ -1,0 +1,21 @@
+# Your job preferences. Anything left null / empty is treated as UNKNOWN (never as "ok").
+# (A new user starts from this file; change it under Settings.)
+titles: []              # preferred job titles / keywords: a job is kept when its title contains one of these
+skills: []              # technical skills you want in a job, e.g. ["Python", "PyTorch"]
+locations: []           # your city / country, e.g. ["Pune", "India"]
+remote_within_locations: true  # remote jobs must also be in the places above (drops "Remote - United States")
+companies: []           # restrict discovery to these companies (empty = all configured companies)
+remote: null            # open to remote roles? (null = unknown)
+hybrid: null            # open to hybrid roles? (null = unknown)
+onsite: null            # open to fully on-site roles? (null = unknown)
+open_to_relocation: null
+notice_period: null     # e.g. "30 days" - used for screening answers; never guessed
+employment_types: []    # e.g. [full-time]
+experience_years_min: null   # your experience range: jobs asking for far more/less can be filtered out
+experience_years_max: null
+posted_within_days: 90       # skip postings older than this many days (jobs with no date are kept; change in Settings)
+min_salary: null        # expected annual minimum
+salary_currency: null   # e.g. INR, USD
+work_authorization: []  # countries you are authorised to work in, e.g. ["India"]
+keywords_include: []
+keywords_exclude: []

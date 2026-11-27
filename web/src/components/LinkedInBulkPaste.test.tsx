@@ -41,7 +41,6 @@ describe("LinkedInBulkPaste", () => {
     fireEvent.change(box, { target: { value: PAGE } });
     expect(screen.getByText(/2 job link\(s\) found/)).toBeInTheDocument();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Read jobs from the pasted text" }));
     expect(screen.getByText(/2 with an exact link; jobs older than 90 days are unticked/)).toBeInTheDocument();
     expect(screen.getByLabelText("Import Senior ML Engineer at Avoma")).not.toBeChecked();      // posted 1 year ago
     expect(screen.getByText("(with description)")).toBeInTheDocument();
@@ -71,7 +70,6 @@ describe("LinkedInBulkPaste", () => {
     fireEvent.change(box, { target: { value: PAGE } });
     expect(screen.getByText(/No job links came with the paste/)).toBeInTheDocument();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Read jobs from the pasted text" }));
     await user.click(screen.getByLabelText("Import AI Engineer at Keywords Studios"));
     await user.click(screen.getByRole("button", { name: "Import 1 selected job(s)" }));
     await waitFor(() => expect(screen.getByText(/1 new job\(s\) imported/)).toBeInTheDocument());
